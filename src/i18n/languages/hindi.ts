@@ -78,7 +78,7 @@ export default {
 		},
 
 		LIGHTS_OUT: {
-			INVALID_SIZE: 'Lights Out sirf 3x5 se 9x10 tak ka ho sakta hai.',
+			INVALID_SIZE: 'Lights Out sirf 2x2 se 15x15 tak ka ho sakta hai.',
 		},
 		MASTERMIND: {
 			ENDED: 'Mastermind ka game {{player}} ke liye samapt ho gaya.',
