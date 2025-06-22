@@ -4,6 +4,7 @@ import { LightsOut, meta as LightsOutMeta } from '@/ps/games/lightsout';
 import { Mastermind, meta as MastermindMeta } from '@/ps/games/mastermind';
 import { Othello, meta as OthelloMeta } from '@/ps/games/othello';
 import { Scrabble, meta as ScrabbleMeta } from '@/ps/games/scrabble';
+import { TicTacToe, meta as TicTacToeMeta } from '@/ps/games/tictactoe';
 import { GamesList, type Meta } from '@/ps/games/types';
 
 export const Games = {
@@ -30,6 +31,10 @@ export const Games = {
 	[GamesList.Scrabble]: {
 		meta: ScrabbleMeta,
 		instance: Scrabble,
+	},
+	[GamesList.TicTacToe]: {
+		meta: TicTacToeMeta,
+		instance: TicTacToe,
 	},
 } satisfies Readonly<Record<GamesList, Readonly<{ meta: Meta; instance: unknown }>>>;
 export type Games = typeof Games;
