@@ -36,6 +36,7 @@ export type Meta = Readonly<
 export enum GamesList {
 	Chess = 'chess',
 	ConnectFour = 'connectfour',
+	ExplodingVoltorb = 'explodingvoltorb',
 	LightsOut = 'lightsout',
 	Mastermind = 'mastermind',
 	Othello = 'othello',

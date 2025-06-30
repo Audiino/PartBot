@@ -84,7 +84,9 @@ export default {
 			PRIVATE: "Psst it's your turn to play in {{game}} [{{id}}]",
 			PUBLIC: "{{user}} hasn't played in {{game}} [{{id}}] for {{time}}...",
 		},
-
+		EXPLODING_VOLTORB: {
+			DREW_VOLTORB: 'You drew a Voltorb!',
+		},
 		LIGHTS_OUT: {
 			INVALID_SIZE: 'Lights Out may only be from 3x5 to 9x10.',
 		},

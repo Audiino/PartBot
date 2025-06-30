@@ -161,7 +161,8 @@ export const command: PSCommand[] = Object.entries(Games).map(([_gameId, Game]):
 							throw new ChatError($T('GAME.ALREADY_JOINED'));
 						}
 					}
-					const id = Game.meta.players === 'single' ? `#${Game.meta.abbr}-${message.author.id}` : generateId();
+					// const id = Game.meta.players === 'single' ? `#${Game.meta.abbr}-${message.author.id}` : generateId();
+					const id = '#TEST';
 					if (PSGames[gameId]?.[id]) throw new ChatError($T('GAME.ALREADY_STARTED'));
 					const game = new Game.instance({ id, meta: Game.meta, room: message.target, $T, args, by: message.author });
 					if (game.meta.players === 'many') {
@@ -419,7 +420,7 @@ export const command: PSCommand[] = Object.entries(Games).map(([_gameId, Game]):
 				name: 'menu',
 				aliases: ['m', 'list'],
 				help: 'Displays active games.',
-				perms: Symbol.for('games.manage'),
+				perms: Symbol.for('games.create'),
 				syntax: 'CMD',
 				async run({ message, broadcastHTML }) {
 					const regHTML = renderMenu(message.target, Game.meta, false);
