@@ -4,7 +4,7 @@ import {
     CardCountsMedium, 
     CardCountsLarge
 } from '@/ps/games/explodingvoltorb/constants';
-import { GamePhase, PhaseData } from '@/ps/games/explodingvoltorb/types';
+import { GamePhase, PhaseDataMap } from '@/ps/games/explodingvoltorb/types';
 import { render } from '@/ps/games/explodingvoltorb/render';
 import { type BaseContext, BaseGame } from '@/ps/games/game';
 
@@ -40,21 +40,43 @@ export class ExplodingVoltorb extends BaseGame<State> {
 			// Draw: d
 			case 'd': {
                 const turn = this.turn!;
-				const drewVoltorb = this.draw();
-                if (drewVoltorb) this.room.privateSend(turn, this.$T('GAME.EXPLODING_VOLTORB.DREW_VOLTORB'));
+				const drewVoltorb = this.drawTopCard();
 
+                if (drewVoltorb) {
+                    const hand = this.state.hand[turn];
+                    const hasDefuse = hand.includes(CardType.DEFUSE);                    
+            
+                    this.state.phase = GamePhase.VoltorbReaction;
+                    this.state.phaseData = {
+                        phase: GamePhase.VoltorbReaction,
+                        hasDefuse,
+                        voltorbDrawn: true,
+                    };
+            
+                    this.room.privateSend(turn, this.$T('GAME.EXPLODING_VOLTORB.DREW_VOLTORB'));                    
+                    this.update();
+                    return;
+                }
+
+                this.nextPlayer();
+                this.update();  
 				break;
 			}
+            // Replace: r to replace card
+            case 'r': {
+                if (!value) this.throw();
+                this.replaceVoltorb(value);
+                this.nextPlayer();
+                this.update();  
+				break;
+            }
 			default:
 				this.throw();
-		}
-        
-        this.nextPlayer();
-        this.update();        
+		}                      
     }
 
 
-    draw(): boolean {        
+    drawTopCard(): boolean {        
         const topCard = this.state.board.drawPile.shift();
         const turn = this.turn!;
 
@@ -62,11 +84,46 @@ export class ExplodingVoltorb extends BaseGame<State> {
             this.throw();
         }
     
-        const isVoltorb = topCard === 'Exploding Voltorb';
-    
+        const isVoltorb = topCard === 'Exploding Voltorb';            
+
         this.state.hand[turn].push(topCard);
     
         return isVoltorb;
+    }
+
+    replaceVoltorb(value: string): void {
+        const turn = this.turn!;
+		const player = this.players[turn];
+		if (!player) this.throw();
+        const hand = this.state.hand[turn];
+	    if (!hand) this.throw();
+
+        const voltorbIndex = hand.indexOf(CardType.EXPLODING_VOLTORB);
+	    if (voltorbIndex === -1) this.throw('GAME.EXPLODING_VOLTORB.NO_VOLTORB_IN_HAND');
+
+
+        const position = parseInt(value.trim(), 10);
+
+        if (
+            isNaN(position) ||
+		    !/^\d+$/.test(value.trim()) ||
+		    position < 1 ||
+		    position > this.state.board.drawPile.length + 1
+        ) {
+            this.throw('GAME.EXPLODING_VOLTORB.INVALID_VOLTORB_REPLACEMENT');
+	    }	        
+        
+	    const [voltorbCard] = hand.splice(voltorbIndex, 1);
+        this.state.board.drawPile.splice(position - 1, 0, voltorbCard);	
+
+        const defuseIndex = hand.indexOf(CardType.DEFUSE);
+	    if (defuseIndex === -1) this.throw();
+	    const [defuseCard] = hand.splice(defuseIndex, 1);
+        this.state.board.discardPile.push(defuseCard);
+        this.state.board.discardPileLastPlayed.push(defuseCard);
+        
+	    this.state.phase = GamePhase.WaitingForAction;
+	    this.state.phaseData = {};
     }
     
     onStart(): ActionResponse {		
@@ -93,7 +150,7 @@ export class ExplodingVoltorb extends BaseGame<State> {
         });           
 
         const voltorbs = Array(numPlayers - 1).fill(CardType.EXPLODING_VOLTORB);        
-        
+                
         this.state.board = {
             drawPile: [...this.state.baseCards, ...voltorbs].shuffle(this.prng),
             discardPile: [],
@@ -111,6 +168,8 @@ export class ExplodingVoltorb extends BaseGame<State> {
 
     render(side: string | null) {
 		const isActive = !!side && side === this.turn;
+        const hand = side ? this.state.hand[side] : undefined;
+
 		const ctx: RenderCtx = {
 			id: this.id,												
             players: Object.fromEntries(
@@ -129,9 +188,9 @@ export class ExplodingVoltorb extends BaseGame<State> {
             drawPileAmount: this.state.board.drawPile.length,
             discardPileAmount: this.state.board.discardPile.length,
             discardPileLastPlayed: this.state.board.discardPileLastPlayed,
-            hand: side ? this.state.hand[side] : undefined,
-            selectedCards: side && side === this.turn ? this.selectedCards : [],
-			isActive,
+            hand,
+            selectedCards: side && side === this.turn ? this.selectedCards : [],            			            
+            isActive,
 			side,
 			turn: this.turn!,	
             phase: this.state.phase,
@@ -149,11 +208,7 @@ export class ExplodingVoltorb extends BaseGame<State> {
 		}
 		return render.bind(this.renderCtx)(ctx);
 	}
-    
-    
-    
-    
-    
+        
     onEnd() {
         return 'Done' as TranslatedText;
     }

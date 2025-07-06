@@ -1,22 +1,24 @@
 import { CardType } from '@/ps/games/explodingvoltorb/constants'
 
-
 export type State = {
 	turn: string;
 	hand: Record<string, CardType[]>;
     baseCards: CardType[];
     board: { drawPile: CardType[]; discardPile: CardType[]; discardPileLastPlayed: CardType[] };        
+    phase: GamePhase;
+    phaseData: PhaseData;
 };
 
 export type RenderCtx = {
 	id: string;		
 	header?: string;
 	dimHeader?: boolean;
-	players?: Record<string, { name: string; hand: number; out?: boolean | undefined }>;
+	players: Record<string, { name: string; hand: number; out?: boolean | undefined }>;
     drawPileAmount: number;
     discardPileAmount: number;
-    discardPileLastPlayed: CardType[];
+    discardPileLastPlayed: CardType[]; // Record<CardType, number>
 	hand: CardType[] | undefined;
+    selectedCards: number[];
 	isActive: boolean;
 	side: string | null;
 	turn: string;	
@@ -33,12 +35,29 @@ export enum GamePhase {
     EndOfTurn = 'End of turn',    
 }
 
-export type PhaseData =
-  | { phase: GamePhase.WaitingForAction; turnsLeft: number }
-  | { phase: GamePhase.NopingWindow; playedCards: CardType[]; timerEndsAt: number; nopes: string[] } // nopes as user IDs
-  | { phase: GamePhase.ResolvingAction; actionSucessful: boolean; playedCards: CardType[] }
-  | { phase: GamePhase.DrawingCard; }
-  | { phase: GamePhase.VoltorbReaction; hasDefuse: boolean; voltorbDrawn: boolean }
-  | { phase: GamePhase.EndOfTurn; turnsLeft: number }
-  
-  
+export type PhaseDataMap = {
+    [GamePhase.WaitingForAction]: {};
+    [GamePhase.NopingWindow]: {
+        phase: GamePhase.NopingWindow;
+        playedCards: CardType[];
+        nopes: string[]; // usernames of ppl who noped
+    };
+    [GamePhase.ResolvingAction]: {
+        phase: GamePhase.ResolvingAction;
+        actionSuccessful: boolean;
+        playedCards: CardType[];
+    };
+    [GamePhase.DrawingCard]: {};
+    [GamePhase.VoltorbReaction]: {
+        phase: GamePhase.VoltorbReaction;
+        hasDefuse: boolean;
+        voltorbDrawn: boolean;
+    };
+    [GamePhase.EndOfTurn]: {
+        phase: GamePhase.EndOfTurn;
+        turnsLeft: number;
+    };
+}
+
+type Phase = keyof PhaseDataMap;
+type PhaseData = PhaseDataMap[Phase];
