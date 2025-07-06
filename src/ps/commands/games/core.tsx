@@ -127,7 +127,7 @@ export const command: PSCommand[] = Object.entries(Games).map(([_gameId, Game]):
 
 	function getGame(feed: string, searchCtx: SearchContext, roomCtx: RoomContext): { game: CommonGame; ctx: string } {
 		const { $T } = roomCtx;
-		const [fullSpec, fullCtx] = feed.lazySplit(/\s*,\s*/, 1);
+		const [fullSpec, fullCtx = ''] = feed.lazySplit(/\s*,\s*/, 1);
 		const fullGame = gameFromContext(fullSpec, searchCtx, roomCtx, fullCtx);
 		if (fullGame) return { game: fullGame, ctx: fullCtx };
 		const inferredGame = gameFromContext(null, searchCtx, roomCtx, feed);
@@ -434,7 +434,7 @@ export const command: PSCommand[] = Object.entries(Games).map(([_gameId, Game]):
 				name: 'stash',
 				aliases: ['yeet'],
 				help: 'Stashes a game to store it for later.',
-				perms: Symbol.for('games.manage'),
+				perms: Symbol.for('games.create'),
 				syntax: 'CMD [game ref]',
 				async run({ message, arg, $T }) {
 					const { game } = getGame(arg, { action: 'any' }, { room: message.target, $T });
@@ -450,7 +450,7 @@ export const command: PSCommand[] = Object.entries(Games).map(([_gameId, Game]):
 							name: 'backups',
 							aliases: ['bu', 'b'],
 							help: 'Shows a list of currently available backups.',
-							perms: Symbol.for('games.manage'),
+							perms: Symbol.for('games.create'),
 							syntax: 'CMD',
 							async run({ message }) {
 								const HTML = renderBackups(message.target, Game.meta);
@@ -461,7 +461,7 @@ export const command: PSCommand[] = Object.entries(Games).map(([_gameId, Game]):
 							name: 'restore',
 							aliases: ['r', 'unstash', 'unyeet'],
 							help: 'Restores a game from stash/backups.',
-							perms: Symbol.for('games.manage'),
+							perms: Symbol.for('games.create'),
 							syntax: 'CMD [id]',
 							async run({ message, arg, $T }) {
 								const id = arg.trim().toUpperCase();
