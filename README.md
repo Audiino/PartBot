@@ -4,15 +4,9 @@ _A modern rewrite of PartBot for Pokémon Showdown._
 
 ---
 
-Hiya! This is an ongoing effort to rewrite [PartBot](https://github.com/PartMan7/PartBot) from the bottom-up, with better practices than the steaming pile of bamboo sticks that currently supports it.
+Hiya! This is an ongoing effort to rewrite [PartBot](https://github.com/PartMan7/PartProfessor) from the bottom-up, with better practices than the steaming pile of bamboo sticks that currently supports it.
 
 This might take a while...
-
-## Features
-
-- Modular and extensible TypeScript codebase
-- Real-time file watching and reloads
-- Rich set of utilities for tournaments, games (e.g., Chess), and more
 
 ## Getting Started
 
@@ -20,7 +14,6 @@ This might take a while...
 
 - [Node.js](https://nodejs.org/) (v18+ recommended)
 - [npm](https://www.npmjs.com/)
-- [MongoDB](https://www.mongodb.com/) (for persistence)
 
 ### Installation
 
@@ -45,6 +38,19 @@ This might take a while...
    ```bash
    npm start
    ```
+
+## Translations
+
+If you're interested in helping out with translations (either to correct existing translations or to add new ones), contributions are happily welcomed!
+
+Currently, PartBot supports the following languages on Showdown:
+
+- English
+- Hindi (PoC [@P9](https://github.com/ISenseAura))
+- Portuguese (PoC [@Seyhura](https://github.com/Seyhura))
+- French (PoC [@Distrib](https://github.com/Distrib-ps))
+
+Feel free to refer to the [source code](https://github.com/PartMan7/PartBot/tree/main/src/i18n/languages) for the actual translations.
 
 ## Suggestions, Bug Reports, and Feedback
 
