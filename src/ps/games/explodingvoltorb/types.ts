@@ -14,9 +14,7 @@ export type RenderCtx = {
 	header?: string;
 	dimHeader?: boolean;
 	players: Record<string, { name: string; hand: number; out?: boolean | undefined }>;
-    drawPileAmount: number;
-    discardPileAmount: number;
-    discardPileLastPlayed: CardType[]; // Record<CardType, number>
+    board: { drawPileAmount: number; discardPileAmount: number; discardPileLastPlayedAmount: Record<CardType, number>};
 	hand: CardType[] | undefined;
     selectedCards: number[];
 	isActive: boolean;
@@ -25,6 +23,8 @@ export type RenderCtx = {
     phase: GamePhase;
     phaseData: PhaseData;
 };
+
+export type WinCtx = { type: 'win'; winnerIDs: string[] } | { type: 'draw' };
 
 export enum GamePhase {
     WaitingForAction = 'Waiting for action',

@@ -26,28 +26,19 @@ function PlayerHands({ players }: { players: RenderCtx['players'] }): ReactEleme
 	});
 }
 
-function LastPlayedCards({ discardPileLastPlayed }: {discardPileLastPlayed: RenderCtx['discardPileLastPlayed']}): ReactElement[] {    
-    const cardCounts: Record<CardType, number> = discardPileLastPlayed.reduce((cardCounts, card) => {
-	    cardCounts[card] = (cardCounts[card] || 0) + 1;
-	    return cardCounts;
-    }, {} as Record<CardType, number>);
-
-    return Object.entries(cardCounts).map(([card, count]) => (
-		<div key={card}>
-			{card}: {count}
-		</div>
-	));
-    
-}
-
 export function render(this: This, ctx: RenderCtx): ReactElement {
     return (
         <center>
         
         <UserPanel>                        
-            <div>Draw pile: {pluralize(ctx.drawPileAmount, 'card', 'cards')}</div>
-            <div>Discard pile: {pluralize(ctx.discardPileAmount, 'card', 'cards')}</div>
-            <div>Last played: {pluralize(ctx.discardPileLastPlayed.length, 'card', 'cards')}</div>            
+            <div>Draw pile: {pluralize(ctx.board.drawPileAmount, 'card', 'cards')}</div>
+            <div>Discard pile: {pluralize(ctx.board.discardPileAmount, 'card', 'cards')}</div>
+            <div>
+                Last played:{" "}
+                {Object.entries(ctx.board.discardPileLastPlayedAmount)
+                    .map(([card, count]) => `${card}: ${count}`)
+                    .join(", ")}
+            </div>
             <hr />
             <PlayerHands players={ctx.players} />
         </UserPanel>        
@@ -72,9 +63,7 @@ export function render(this: This, ctx: RenderCtx): ReactElement {
                                     <button>Replace</button>
                                 </Form>
                             ) : (
-                                <div style={{ color: 'gray' }}>
-                                    Rip you have no Defuse cards, you exploded.
-                                </div>
+                                <div>Rip you have no Defuse cards, you exploded.</div>                                                                
                             )}
                         </UserPanel>
 					) : null }

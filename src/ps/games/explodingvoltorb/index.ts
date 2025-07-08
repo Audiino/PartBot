@@ -10,7 +10,7 @@ import { type BaseContext, BaseGame } from '@/ps/games/game';
 
 import type { TranslatedText } from '@/i18n/types';
 import type { User } from 'ps-client';
-import type { RenderCtx, State } from '@/ps/games/explodingvoltorb/types';
+import type { State, RenderCtx, WinCtx } from '@/ps/games/explodingvoltorb/types';
 import type { ActionResponse, EndType } from '@/ps/games/types';
 
 export { meta } from '@/ps/games/explodingvoltorb/meta';
@@ -18,6 +18,7 @@ export { meta } from '@/ps/games/explodingvoltorb/meta';
 export class ExplodingVoltorb extends BaseGame<State> {
     selectedCards: number[] = [];
     turnCount: number | null = null;
+    winCtx?: WinCtx | { type: EndType };
     text: string[] = [];
     
     constructor(ctx: BaseContext) {
@@ -54,7 +55,17 @@ export class ExplodingVoltorb extends BaseGame<State> {
                     };
             
                     this.room.privateSend(turn, this.$T('GAME.EXPLODING_VOLTORB.DREW_VOLTORB'));                    
-                    this.update();
+
+                    if (hasDefuse) {
+                        this.update();
+                    }
+                    else {
+                        this.discardPlayerHand(turn);
+                        // if you dont have defuse, eliminate the player and yeet their cards to the discardPile
+                        // this.removePlayer but we need it to be out, not ff or dq                        
+                    }                    
+                    
+                    
                     return;
                 }
 
@@ -126,6 +137,14 @@ export class ExplodingVoltorb extends BaseGame<State> {
 	    this.state.phaseData = {};
     }
     
+    discardPlayerHand(side: string): void {
+        const hand = this.state.hand[side];
+        if (!hand) this.throw;
+        
+        this.state.board.discardPile.push(...hand);
+        this.state.hand[side] = [];
+    }
+
     onStart(): ActionResponse {		
         const numPlayers = Object.keys(this.players).length;        
 
@@ -153,7 +172,7 @@ export class ExplodingVoltorb extends BaseGame<State> {
                 
         this.state.board = {
             drawPile: [...this.state.baseCards, ...voltorbs].shuffle(this.prng),
-            discardPile: [],
+            discardPile: [],            
             discardPileLastPlayed: [],
         }	
 
@@ -185,9 +204,14 @@ export class ExplodingVoltorb extends BaseGame<State> {
                     ];
                 })
             ),
-            drawPileAmount: this.state.board.drawPile.length,
-            discardPileAmount: this.state.board.discardPile.length,
-            discardPileLastPlayed: this.state.board.discardPileLastPlayed,
+            board: {
+                drawPileAmount: this.state.board.drawPile.length,
+                discardPileAmount: this.state.board.discardPile.length,
+                discardPileLastPlayedAmount: this.state.board.discardPileLastPlayed.reduce((cardCount, card) => {
+                    cardCount[card] = (cardCount[card] || 0) + 1;
+                    return cardCount;
+                }, {} as Record<CardType, number>),
+            },                     
             hand,
             selectedCards: side && side === this.turn ? this.selectedCards : [],            			            
             isActive,
@@ -209,9 +233,13 @@ export class ExplodingVoltorb extends BaseGame<State> {
 		return render.bind(this.renderCtx)(ctx);
 	}
         
-    onEnd() {
-        return 'Done' as TranslatedText;
+    onEnd(type?: EndType): TranslatedText {
+        if (type) {
+			this.winCtx = { type };
+			if (type === 'dq') return this.$T('GAME.ENDED_AUTOMATICALLY', { game: this.meta.name, id: this.id });			
+			return this.$T('GAME.ENDED', { game: this.meta.name, id: this.id });
+		}
+		
+        return "Done" as TranslatedText;
     }
 }
-
-
