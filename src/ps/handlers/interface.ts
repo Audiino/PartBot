@@ -27,7 +27,7 @@ export function interfaceHandler(message: PSMessage) {
 
 			const user = message.author.id;
 			const player = Object.values(game.players).find(player => player.id === user);
-			if (game.hasPlayer(user) || (player && player.out)) {
+			if (game.hasPlayer(user) && player && !player.out) {
 				message.reply(game.$T('GAME.CANNOT_LEAVE', { prefix, game: game.meta.id }));
 				return game.update(user);
 			}
