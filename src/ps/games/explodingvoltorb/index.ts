@@ -5,7 +5,7 @@ import {
 	CardType
 } from '@/ps/games/explodingvoltorb/constants';
 import { render, renderMove } from '@/ps/games/explodingvoltorb/render';
-import { GamePhase } from '@/ps/games/explodingvoltorb/types';
+import { AllowedActions, GamePhase } from '@/ps/games/explodingvoltorb/types';
 import { type BaseContext, BaseGame } from '@/ps/games/game';
 
 import type { TranslatedText } from '@/i18n/types';
@@ -34,29 +34,33 @@ export class ExplodingVoltorb extends BaseGame<State> {
 		const [action, value] = ctx.lazySplit(' ', 1) as [string | undefined, string | undefined];
 		if (!action) this.throw();
 
+		const allowed = AllowedActions[this.state.phase];
+		if (!allowed.includes(action.charAt(0))) this.throw('GAME.EXPLODING_VOLTORB.INVALID_ACTION_FOR_PHASE');
+
 		switch (action.charAt(0)) {
 			// Select: s to make the cards buttons and go select
 			case 's': {	
 				break;
+			}
+			// Nope: play a nope card
+			case 'n': {	
+				break;
 			}			
 			// Draw: d
-			case 'd': {				
-				this.drawTopCard();				
+			case 'd': {
+				this.drawTopCard();
 				break;
 			}
 			// Replace: r to replace card
 			case 'r': {
 				if (!value) this.throw();
 				this.replaceVoltorb(value);
-				
-				
 				break;
 			}
 			default:
 				this.throw();
-		}                      
+		}
 	}
-
 
 	drawTopCard(): void {        		
 		const turn = this.turn!;
@@ -93,12 +97,8 @@ export class ExplodingVoltorb extends BaseGame<State> {
 				this.update();
 			}
 			else {
-				getsEliminated = true;
-				this.discardPlayerHand(turn);
-				this.removePlayer(turn);
-				const next = this.nextPlayer();
-				if (!next) return this.end();			                      
-			}                    												
+				getsEliminated = true;				
+			}
 		}
 		
 		const logEntry: Log = {
@@ -106,10 +106,19 @@ export class ExplodingVoltorb extends BaseGame<State> {
 			time: new Date(),
 			turn,
 			ctx: { hand: oldHand, drawnCard: topCard, getsEliminated },
-		};			
+		};
 		this.log.push(logEntry);
 		this.room.sendHTML(...renderMove(logEntry, this));
 
+		if (getsEliminated) {
+			this.discardPlayerHand(turn);
+			this.removePlayer(turn);
+			this.nextPlayer();
+			this.state.phase = GamePhase.WaitingForAction;
+			this.update();
+		}
+		if (this.gameOver()) return this.end();		     
+		
 		if (!drewVoltorb) this.nextPlayer();
 	}
 
@@ -147,7 +156,7 @@ export class ExplodingVoltorb extends BaseGame<State> {
 		this.state.board.discardPile.push(defuseCard);
 		this.state.board.discardPileLastPlayed.push(defuseCard);
 		
-		this.state.phase = GamePhase.WaitingForAction;	    
+		this.state.phase = GamePhase.WaitingForAction;
 
 		const logEntry: Log = {
 			action: 'replace',
@@ -170,7 +179,12 @@ export class ExplodingVoltorb extends BaseGame<State> {
 		this.state.hand[side] = [];
 	}
 
-	onStart(): ActionResponse {		
+	gameOver(): boolean {
+		const players = Object.values(this.players).filter(player => !player.out);
+		return players.length <= 1;
+	}
+
+	onStart(): ActionResponse {
 		const numPlayers = Object.keys(this.players).length;        
 
 		if (numPlayers >= 2 && numPlayers <= 3) {            

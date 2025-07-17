@@ -29,8 +29,7 @@ export type WinCtx = { type: 'win'; winnerIDs: string[] } | { type: 'draw' };
 export enum GamePhase {
 	WaitingForAction = 'Waiting for action',
 	NopingWindow = 'Noping window',
-	ResolvingAction = 'Resolving action',
-	DrawingCard = 'Drawing card',
+	ResolvingAction = 'Resolving action',	
 	VoltorbReaction = 'Voltorb reaction',
 	EndOfTurn = 'End of turn',    
 }
@@ -49,10 +48,7 @@ export type PhaseDataMap = {
 		phase: GamePhase.ResolvingAction;
 		actionSuccessful: boolean;
 		playedCards: CardType[];
-	};
-	[GamePhase.DrawingCard]: {
-		phase: GamePhase.DrawingCard;
-	};
+	};	
 	[GamePhase.VoltorbReaction]: {
 		phase: GamePhase.VoltorbReaction;
 		hasDefuse: boolean;
@@ -66,3 +62,11 @@ export type PhaseDataMap = {
 
 type Phase = keyof PhaseDataMap;
 type PhaseData = PhaseDataMap[Phase];
+
+export const AllowedActions: Record<GamePhase, string[]> = {
+	[GamePhase.WaitingForAction]: ['d', 's'],
+	[GamePhase.NopingWindow]: ['n'],
+	[GamePhase.ResolvingAction]: [],
+	[GamePhase.VoltorbReaction]: ['r'],
+	[GamePhase.EndOfTurn]: [],
+};

@@ -109,6 +109,7 @@ export default {
 			DREW_VOLTORB: 'You drew a Voltorb! If you have a Defuse it will automatically be used and you can put the Voltorb back in the draw pile. 1 means it will be the next card to be drawn, 2 will be the second, etc.',
 			NO_VOLTORB_IN_HAND: "But you're not actually holding a Voltorb...",
 			INVALID_VOLTORB_REPLACEMENT: "You can't place the Voltorb there lol",
+			INVALID_ACTION_FOR_PHASE: "You can't do that action right now.",
 		},
 		LIGHTS_OUT: {
 			INVALID_SIZE: 'Lights Out may only be from 3x5 to 9x10.',

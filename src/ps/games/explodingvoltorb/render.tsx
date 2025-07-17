@@ -10,7 +10,6 @@ import type { CSSProperties, ReactElement, ReactNode } from 'react';
 
 type This = { msg: string };
 
-
 export function renderMove(logEntry: Log, { id, players, renderCtx: { msg } }: ExplodingVoltorb): [ReactElement, { name: string }] {
 	const Wrapper = ({ children }: { children: ReactNode }): ReactElement => (
 		<>
@@ -28,9 +27,11 @@ export function renderMove(logEntry: Log, { id, players, renderCtx: { msg } }: E
 
 	switch (logEntry.action) {
 		case 'draw':
+			const getsEliminated = logEntry.ctx.getsEliminated;
 			return [
-				<Wrapper>
-					<Username name={playerName} /> drew a card.
+				<Wrapper>				
+					<Username name={playerName} /> drew a
+					{getsEliminated ? (' Voltorb and blew up!') : (' card.')}
 				</Wrapper>,
 				opts,
 			];

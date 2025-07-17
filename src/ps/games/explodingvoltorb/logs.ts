@@ -1,7 +1,6 @@
 import type { CardType } from '@/ps/games/explodingvoltorb/constants';
 import type { BaseLog } from '@/ps/games/types';
 import type { Satisfies, SerializedInstance } from '@/types/common';
-import type { Point } from '@/utils/grid';
 
 export type Log = Satisfies<
 	BaseLog,
