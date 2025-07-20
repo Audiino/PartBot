@@ -39,11 +39,13 @@ export class ExplodingVoltorb extends BaseGame<State> {
 
 		switch (action.charAt(0)) {
 			// Select: s to make the cards buttons and go select
-			case 's': {	
+			case 's': {
+				if (!value) this.throw();
+				this.selectCard(value);
 				break;
 			}
 			// Nope: play a nope card
-			case 'n': {	
+			case 'n': {
 				break;
 			}			
 			// Draw: d
@@ -60,6 +62,17 @@ export class ExplodingVoltorb extends BaseGame<State> {
 			default:
 				this.throw();
 		}
+	}
+
+	selectCard(value: string): void {
+		// TODO: select cards add selected card to selectedCards...?
+		// but also seems like you can only play one card at a time
+		// as in, play a skip and that's one card
+		// then you can play an attack after?
+		// might take away the whole concept of select card
+		// main issue is the cat cards since they don't work alone
+		// //might organise them all into one button or something
+		// needs to be considered further
 	}
 
 	drawTopCard(): void {        		

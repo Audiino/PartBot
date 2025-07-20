@@ -109,8 +109,12 @@ export function render(this: This, ctx: RenderCtx): ReactElement {
 			<>
 				<UserPanel>
 					<div>
-						{ctx.hand?.map((card, i) => (
-							<div key={i}>{card}</div>
+						{ctx.hand?.map((card, i) => (							
+							<div key={i}>
+								<Button value={`${this.msg} ! s ${i}`}>
+									{card}
+								</Button>
+							</div>
 						))}
 					</div>                    
 				</UserPanel>
