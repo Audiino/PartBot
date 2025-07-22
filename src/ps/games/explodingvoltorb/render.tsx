@@ -1,12 +1,12 @@
 import { Button, Form, Username } from '@/utils/components/ps';
 import { Logger } from '@/utils/logger';
 import { pluralize } from '@/utils/pluralize';
-import { CardType } from '@/ps/games/explodingvoltorb/constants';
+import { CardType, CardDescription } from '@/ps/games/explodingvoltorb/constants';
 
 import type { ExplodingVoltorb } from '@/ps/games/explodingvoltorb';
 import type { Log } from '@/ps/games/explodingvoltorb/logs';
 import type { RenderCtx } from '@/ps/games/explodingvoltorb/types';
-import type { CSSProperties, ReactElement, ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 
 type This = { msg: string };
 
@@ -108,15 +108,27 @@ export function render(this: This, ctx: RenderCtx): ReactElement {
 		{ctx.side ? (
 			<>
 				<UserPanel>
-					<div>
-						{ctx.hand?.map((card, i) => (							
-							<div key={i}>
-								<Button value={`${this.msg} ! s ${i}`}>
-									{card}
-								</Button>
+					<div>						
+						{ctx.hand?.map((card, i) => (
+							<div key={i} style={{ margin: '2px 0' }}>
+								<details>
+									<summary style={{ cursor: 'pointer' }}>
+										{card}
+									</summary>
+									
+									<div style={{ border: '1px solid', borderRadius: 4, padding: '4px 8px', marginTop: 4 }}>									
+										<div>
+											{CardDescription[card]}
+										</div>
+										<Button value={`${this.msg} ! s ${i}`}>
+											Select card
+										</Button>
+									</div>
+
+								</details>
 							</div>
 						))}
-					</div>                    
+					</div>
 				</UserPanel>
 				{ctx.isActive ? (
 					<>       

@@ -1,3 +1,5 @@
+/* eslint-disable max-len */
+
 export enum CardType {
 	EXPLODING_VOLTORB = 'Exploding Voltorb',
 	DEFUSE = 'Defuse',
@@ -17,6 +19,32 @@ export enum CardType {
 	TACO_CAT = 'Cat card: taco cat',
 	FERAL_CAT = 'Feral cat',
 };
+
+export const CardDescription: Record<CardType, string> = {
+	[CardType.EXPLODING_VOLTORB]: "Show this card immediately. Unless you have a Defuse Card, you're dead. Discard all of your cards, including the Exploding Kitten.",
+	[CardType.DEFUSE]: 'Instead of exploding, secretly put the Exploding Voltorb back into the draw pile.',
+	[CardType.ALTER_THE_FUTURE]: 'Privately view and rearrange the top three cards of the draw pile.',
+	[CardType.SEE_THE_FUTURE]: 'Privately view the top three cards of the draw pile.',
+	[CardType.TARGETED_ATTACK]: 'End your turn without drawing a card. Force any player to take two turns. Play then continues from that player. This effect can stack.',
+	[CardType.ATTACK]: 'End your turn without drawing a card. Force the next player to take two turns. This effect can stack.',
+	[CardType.DRAW_FROM_BOTTOM]: 'End your turn by drawing the bottom card from the draw pile.',
+	[CardType.FAVOR]: 'Force any player to give you a card of their choice.',
+	[CardType.SHUFFLE]: 'Shuffle the draw pile.',
+	[CardType.SKIP]: 'End your turn without drawing a card.',
+	[CardType.NOPE]: 'Stop the action of another player. You can play this at any time. A Nope can be played on another Nope to negate it and create a Yup, and so on. Any cards that have been Noped are put in the discard pile.',
+	[CardType.BEARD_CAT]: 'The Beard Cat is powerless on its own, but can be used in Special Combos.',
+	[CardType.CATTERMELON_CAT]: 'The Cattermelon Cat is powerless on its own, but can be used in Special Combos.',
+	[CardType.POTATO_CAT]: 'The Potato Cat is powerless on its own, but can be used in Special Combos.',
+	[CardType.RAINBOW_CAT]: 'The Rainbow Cat is powerless on its own, but can be used in Special Combos.',
+	[CardType.TACO_CAT]: 'The Taco Cat is powerless on its own, but can be used in Special Combos.',
+	[CardType.FERAL_CAT]: 'The Feral Cat is powerless on its own, but can be used as any cat card in Special Combos.',
+}
+
+export enum CombosDescription {
+	TWO_OF_A_KIND = 'Play any two identical cards to steal a random card from any player.',
+	THREE_OF_A_KIND = "Play any three identical cards to name a card you want from any player. If they have it, you take the card. If they don't have it, you get nothing.",
+	FIVE_DIFFERENT_KINDS = 'Play any five different cards to take one card from the discard pile.',
+}
 
 // total 41
 export const CardCountsSmall: Record<CardType, number> = {
