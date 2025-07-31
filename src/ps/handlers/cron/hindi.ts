@@ -26,6 +26,7 @@ function _postGGSSEvent(this: Client) {
 	const ggssRoom = this.getRoom('galligallisimsim');
 	if (!ggssRoom) return;
 
+	ggssRoom.send('/hangman end');
 	ggssRoom.send('Khelne ke liye shukriya!'); // TODO: Use i18n instead
 	ggssRoom.send('/modchat +');
 	if (Math.random() < 0.1) {
@@ -66,8 +67,9 @@ async function Hangman(this: Client) {
 
 		gamesDone++;
 		await sleep('20s');
-		room.send('/hangman end');
 	}
+
+	await sleep('40s');
 
 	_postGGSSEvent.call(this);
 }
@@ -75,7 +77,7 @@ async function Hangman(this: Client) {
 export function register(this: Client, Jobs: PSCronJobManager): void {
 	// Main room
 	Jobs.register('hindi-automodchat-enable', '0 0 * * *', TimeZone.IST, () => {
-		this.getRoom('hindi')?.send('/automodchat 10, +');
+		this.getRoom('hindi')?.send('/automodchat 5, +');
 	});
 	Jobs.register('hindi-automodchat-disable', '0 7 * * *', TimeZone.IST, () => {
 		const room = this.getRoom('hindi');
