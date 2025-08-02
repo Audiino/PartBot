@@ -3,6 +3,7 @@ import type { CardType } from '@/ps/games/explodingvoltorb/constants'
 export type State = {
 	turn: string;
 	hand: Record<string, CardType[]>;
+	selectedCards: boolean[];
 	baseCards: CardType[];
 	board: { drawPile: CardType[]; discardPile: CardType[]; discardPileLastPlayed: CardType[] };        
 	phase: GamePhase;
@@ -14,9 +15,9 @@ export type RenderCtx = {
 	header?: string;
 	dimHeader?: boolean;
 	players: Record<string, { name: string; hand: number; out?: boolean | undefined }>;
-	board: { drawPileAmount: number; discardPileAmount: number; discardPileLastPlayedAmount: Record<CardType, number>};
+	board: { drawPileAmount: number; discardPileAmount: number; discardPileLastPlayedAmount: Record<CardType, number> };
 	hand: CardType[] | undefined;
-	selectedCards: number[];
+	selection: { cards: boolean[]; cardNames: CardType[]; cardAmount: number; hasAny: boolean; }	
 	isActive: boolean;
 	side: string | null;
 	turn: string;	

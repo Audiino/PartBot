@@ -92,7 +92,7 @@ export function render(this: This, ctx: RenderCtx): ReactElement {
 	return (
 		<center>
 		
-		<UserPanel>                        
+		<UserPanel>
 			<div>Draw pile: {pluralize(ctx.board.drawPileAmount, 'card', 'cards')}</div>
 			<div>Discard pile: {pluralize(ctx.board.discardPileAmount, 'card', 'cards')}</div>
 			<div>
@@ -103,55 +103,70 @@ export function render(this: This, ctx: RenderCtx): ReactElement {
 			</div>
 			<hr />
 			<PlayerHands players={ctx.players} />
-		</UserPanel>        
+		</UserPanel>
 
 		{ctx.side ? (
+			
+			
+			// {ctx.hasSelectedCards ? (
+			// You have selected: some logic ish here to get the cards
+			// ): null}			
+			// The effect is/This selection is invalid
+			// confirm (or doesn't exist if invalid)
 			<>
+			{ctx.selection.hasAny ? (
 				<UserPanel>
-					<div>						
-						{ctx.hand?.map((card, i) => (
-							<div key={i} style={{ margin: '2px 0' }}>
-								<details>
-									<summary style={{ cursor: 'pointer' }}>
-										{card}
-									</summary>
-									
-									<div style={{ border: '1px solid', borderRadius: 4, padding: '4px 8px', marginTop: 4 }}>									
-										<div>
-											{CardDescription[card]}
-										</div>
-										<Button value={`${this.msg} ! s ${i}`}>
-											Select card
-										</Button>
-									</div>
-
-								</details>
-							</div>
-						))}
-					</div>
+					<div>You have selected {pluralize(ctx.selection.cardAmount, 'card', 'cards')}: {ctx.selection.cardNames.join(", ")}</div>
 				</UserPanel>
-				{ctx.isActive ? (
-					<>       
-					{ctx.phase === 'Voltorb reaction' ? (
-						<UserPanel>  
-							<div>You drew a Voltorb!</div>
-							{ctx.hand?.includes(CardType.DEFUSE) ? (
-								<Form value={`${this.msg} ! r {replaceVoltorb}`} style={{ margin: '4px 0' }}>
-									<input name="replaceVoltorb" placeholder="1 for top most position" width="100" style={{ marginRight: 4 }} />
-									<button>Replace</button>
-								</Form>
-							) : (
-								<div>Rip you have no Defuse cards, you exploded.</div>                                                                
-							)}
-						</UserPanel>
-					) : null }
-						<UserPanel>                              
-							<Button value={`${this.msg} ! d`} style={{ border: '2px solid darkred', borderRadius: 4 }}>
-								End turn and draw
-							</Button>                                                      
-						</UserPanel>
-					</>
-				) : null}
+			) : null}
+
+			<UserPanel>
+				<div>
+					{ctx.hand?.map((card, i) => (
+						<div key={i} style={{ margin: '2px 0' }}>
+							<details>
+								<summary style={{ cursor: 'pointer' }}>
+									{ctx.selection.cards[i] ? (
+										<>
+											<Button value={`${this.msg} ! s ${i}`}><b>{card}</b></Button>
+										</>										
+									) : (
+										<>										
+										<Button value={`${this.msg} ! s ${i}`}>{card}</Button>
+										</>
+									)}									
+								</summary>
+								<div style={{ border: '1px solid', borderRadius: 4, padding: '4px 8px', marginTop: 4 }}>
+									{CardDescription[card]}<br></br>									
+								</div>
+							</details>
+						</div>
+					))}
+				</div>
+			</UserPanel>
+
+			{ctx.isActive ? (
+				<>       
+				{ctx.phase === 'Voltorb reaction' ? (
+					<UserPanel>  
+						<div>You drew a Voltorb!</div>
+						{ctx.hand?.includes(CardType.DEFUSE) ? (
+							<Form value={`${this.msg} ! r {replaceVoltorb}`} style={{ margin: '4px 0' }}>
+								<input name="replaceVoltorb" placeholder="1 for top most position" width="100" style={{ marginRight: 4 }} />
+								<button>Replace</button>
+							</Form>
+						) : (
+							<div>Rip you have no Defuse cards, you exploded.</div>
+						)}
+					</UserPanel>
+				) : null }
+					<UserPanel>                              
+						<Button value={`${this.msg} ! d`} style={{ border: '2px solid darkred', borderRadius: 4 }}>
+							End turn and draw
+						</Button>                                                      
+					</UserPanel>
+				</>
+			) : null}
 			</>
 		) : null}        
 		

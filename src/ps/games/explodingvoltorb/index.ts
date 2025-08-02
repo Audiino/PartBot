@@ -17,8 +17,7 @@ import type { User } from 'ps-client';
 export { meta } from '@/ps/games/explodingvoltorb/meta';
 
 export class ExplodingVoltorb extends BaseGame<State> {
-	log: Log[] = [];
-	selectedCards: number[] = [];
+	log: Log[] = [];	
 	turnCount: number | null = null;
 	winCtx?: WinCtx | { type: EndType };
 	text: string[] = [];	
@@ -50,7 +49,8 @@ export class ExplodingVoltorb extends BaseGame<State> {
 			}			
 			// Draw: d
 			case 'd': {
-				this.drawTopCard();
+				this.deselectAllCards();
+				this.drawTopCard();				
 				break;
 			}
 			// Replace: r to replace card
@@ -64,15 +64,36 @@ export class ExplodingVoltorb extends BaseGame<State> {
 		}
 	}
 
-	selectCard(value: string): void {
-		// TODO: select cards add selected card to selectedCards...?
-		// but also seems like you can only play one card at a time
-		// as in, play a skip and that's one card
-		// then you can play an attack after?
-		// might take away the whole concept of select card
-		// main issue is the cat cards since they don't work alone
-		// //might organise them all into one button or something
-		// needs to be considered further
+	selectCard(value: string): void {		
+		const valueStr = value.replace(/\s/g, '');
+		if (!/^\d+$/.test(valueStr)) this.throw();
+
+		const index = parseInt(valueStr, 10);
+		
+		const turn = this.turn!;
+		const hand = this.state.hand[turn];
+		if (index < 0 || index >= hand.length) this.throw();
+
+		if (this.state.selectedCards.length !== hand.length) {
+			this.state.selectedCards = Array(hand.length).fill(false);
+		}
+
+		this.state.selectedCards[index] = !this.state.selectedCards[index];
+		this.update();
+	}
+
+	deselectAllCards(): void {
+		const turn = this.turn!;
+		const hand = this.state.hand[turn];		
+		this.state.selectedCards = Array(hand.length).fill(false);		
+	}
+
+	getSelectedCardNames(side: string): CardType[] {
+		const hand = this.state.hand[side];
+		const selected = this.state.selectedCards;
+		if (!hand || !selected || hand.length !== selected.length) return [];
+
+		return hand.filter((_, i) => selected[i]);
 	}
 
 	drawTopCard(): void {        		
@@ -216,6 +237,7 @@ export class ExplodingVoltorb extends BaseGame<State> {
 		this.state.baseCards.shuffle(this.prng);        
 
 		this.state.hand = {};
+		this.state.selectedCards = Array(8).fill(false);
 		Object.keys(this.players).forEach(player => {
 			this.state.hand[player] = [CardType.DEFUSE, ...this.state.baseCards.splice(0, 7)];
 		});           
@@ -265,7 +287,12 @@ export class ExplodingVoltorb extends BaseGame<State> {
 				}, {} as Record<CardType, number>),
 			},                     
 			hand,
-			selectedCards: side && side === this.turn ? this.selectedCards : [],            			            
+			selection: {
+				cards: this.state.selectedCards,
+				cardNames: side ? this.getSelectedCardNames(side) : [],
+				cardAmount: this.state.selectedCards.filter(isSelected => isSelected).length,
+				hasAny: this.state.selectedCards.some(isSelected => isSelected),
+			},			
 			isActive,
 			side,
 			turn: this.turn!,	
