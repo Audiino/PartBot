@@ -18,7 +18,7 @@ export { meta } from '@/ps/games/connectfour/meta';
 
 export class ConnectFour extends BaseGame<State> {
 	log: Log[] = [];
-	winCtx?: WinCtx | { type: EndType };
+	declare winCtx?: WinCtx | { type: EndType };
 	cache: Record<string, Record<Turn, number>> = {};
 	constructor(ctx: BaseContext) {
 		super(ctx);
@@ -57,7 +57,7 @@ export class ConnectFour extends BaseGame<State> {
 			this.end();
 			return true;
 		}
-		this.nextPlayer();
+		this.endTurn();
 		return board;
 	}
 
@@ -114,7 +114,7 @@ export class ConnectFour extends BaseGame<State> {
 				.setColor('#0080ff')
 				.setAuthor({ name: 'Connect Four - Room Match' })
 				.setTitle(title)
-				// .setURL // TODO: Link game logs on Web
+				.setURL(await this.getURL())
 				.addFields([
 					{
 						name: '\u200b',

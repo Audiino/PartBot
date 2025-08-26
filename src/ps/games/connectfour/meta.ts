@@ -7,6 +7,7 @@ export const meta: Meta = {
 	name: 'Connect Four',
 	id: GamesList.ConnectFour,
 	aliases: ['c4'],
+	abbr: 'C4',
 	players: 'many',
 
 	turns: {
@@ -17,4 +18,14 @@ export const meta: Meta = {
 	autostart: true,
 	pokeTimer: fromHumanTime('30 sec'),
 	timer: fromHumanTime('1 min'),
+
+	// UGO-CODE
+	ugo: {
+		cap: 12,
+		points: {
+			win: 5,
+			draw: 3,
+			loss: 2,
+		},
+	},
 };

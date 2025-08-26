@@ -10,15 +10,15 @@ import {
 	PLAY_ACTION_PATTERN,
 	RACK_SIZE,
 	SELECT_ACTION_PATTERN,
+	ScrabbleMods,
 } from '@/ps/games/scrabble/constants';
 import { ScrabbleModData } from '@/ps/games/scrabble/mods';
 import { render, renderMove } from '@/ps/games/scrabble/render';
-import { createGrid } from '@/ps/games/utils';
+import { checkUGO, createGrid } from '@/ps/games/utils';
 import { type Point, coincident, flipPoint, multiStepPoint, rangePoints, stepPoint } from '@/utils/grid';
 
-import type { TranslatedText } from '@/i18n/types';
+import type { ToTranslate, TranslatedText } from '@/i18n/types';
 import type { BaseContext } from '@/ps/games/game';
-import type { ScrabbleMods } from '@/ps/games/scrabble/constants';
 import type { Log } from '@/ps/games/scrabble/logs';
 import type { BoardTile, Bonus, BonusReducer, Points, RenderCtx, State, WinCtx, Word, WordScore } from '@/ps/games/scrabble/types';
 import type { ActionResponse, EndType } from '@/ps/games/types';
@@ -35,7 +35,7 @@ export class Scrabble extends BaseGame<State> {
 	log: Log[] = [];
 	passCount: number | null = null;
 	selected: Point | null = null;
-	winCtx?: WinCtx | { type: EndType };
+	declare winCtx?: WinCtx | { type: EndType };
 	mod: ScrabbleMods | null = null;
 
 	constructor(ctx: BaseContext) {
@@ -48,12 +48,22 @@ export class Scrabble extends BaseGame<State> {
 	}
 
 	applyMod(mod: ScrabbleMods): ActionResponse<TranslatedText> {
+		// UGO-CODE
+		if (checkUGO(this) && ![ScrabbleMods.POKEMON, ScrabbleMods.CRAZYMONS].includes(mod))
+			return { success: false, error: 'The only mods allowed during UGO are Pokémon and Crazymons!' as ToTranslate };
 		this.mod = mod;
 		this.points = ScrabbleModData[mod].points ?? LETTER_POINTS;
 		return { success: true, data: this.$T('GAME.APPLIED_MOD', { mod: ScrabbleModData[mod].name, id: this.id }) };
 	}
 
 	onStart(): ActionResponse {
+		// UGO-CODE
+		if (checkUGO(this) && !this.mod) {
+			const defaultMod = ScrabbleMods.POKEMON;
+			const applyMons = this.applyMod(defaultMod);
+			if (!applyMons.success) throw new Error(applyMons.error);
+			this.room.send(`Game ${this.id} had ${ScrabbleModData[defaultMod].name} applied automatically!` as ToTranslate);
+		}
 		this.state.baseBoard = BaseBoard;
 		this.state.board = createGrid<BoardTile | null>(BaseBoard.length, BaseBoard[0].length, () => null);
 		this.state.bag = Object.entries((this.mod ? ScrabbleModData[this.mod].counts : null) ?? LETTER_COUNTS)
@@ -253,7 +263,7 @@ export class Scrabble extends BaseGame<State> {
 		this.passCount = 0;
 
 		if (rack.length === 0) return this.end();
-		const next = this.nextPlayer();
+		const next = this.endTurn();
 		if (!next) return this.end();
 	}
 
@@ -292,7 +302,7 @@ export class Scrabble extends BaseGame<State> {
 		this.log.push(logEntry);
 		this.room.sendHTML(...renderMove(logEntry, this));
 
-		this.nextPlayer();
+		this.endTurn();
 	}
 
 	pass(): void {
@@ -305,7 +315,7 @@ export class Scrabble extends BaseGame<State> {
 		if (this.passCount > Object.keys(this.players).length) {
 			return this.end('regular');
 		}
-		this.nextPlayer();
+		this.endTurn();
 	}
 
 	onEnd(type?: EndType): TranslatedText {
@@ -316,6 +326,10 @@ export class Scrabble extends BaseGame<State> {
 			return this.$T('GAME.ENDED', { game: this.meta.name, id: this.id });
 		}
 
+		Object.keys(this.players).forEach(playerId => {
+			this.state.score[playerId] -= this.state.racks[playerId].map(tile => this.points[tile]).sum();
+		});
+
 		const winners = Object.entries(this.state.score)
 			.map(([id, score]) => ({
 				...this.players[id],
@@ -324,9 +338,6 @@ export class Scrabble extends BaseGame<State> {
 			.sortBy(entry => entry.score, 'desc')
 			.filter((entry, _, list) => entry.score === list[0].score);
 
-		Object.keys(this.players).forEach(playerId => {
-			this.state.score[playerId] -= this.state.racks[playerId].map(tile => this.points[tile]).sum();
-		});
 		this.winCtx = {
 			type: 'win',
 			winnerIds: winners.map(winner => winner.id),
@@ -346,7 +357,7 @@ export class Scrabble extends BaseGame<State> {
 	}
 
 	render(side: string | null) {
-		const isActive = !!side && side === this.turn;
+		const isActive = !this.winCtx && !!side && side === this.turn;
 		const ctx: RenderCtx = {
 			id: this.id,
 			baseBoard: this.state.baseBoard,
@@ -378,10 +389,6 @@ export class Scrabble extends BaseGame<State> {
 		return render.bind(this.renderCtx)(ctx);
 	}
 
-	getURL() {
-		return null;
-	}
-
 	// TODO: Fix Discord embeds
 	async renderEmbed(): Promise<EmbedBuilder | null> {
 		const winners = this.winCtx && this.winCtx.type === 'win' ? this.winCtx.winnerIds : null;
@@ -393,8 +400,11 @@ export class Scrabble extends BaseGame<State> {
 		const bestPlayer = winnerPlayers.sortBy(player => player.best?.points ?? 0, 'desc')[0];
 		if (!bestPlayer?.best) return null;
 		const title = `${bestPlayer.name}: ${bestPlayer.best.asText} [${bestPlayer.best.points}]`;
-		return new EmbedBuilder().setColor('#ccc5a8').setAuthor({ name: 'Scrabble - Room Match' }).setTitle(title);
-		// .setURL(this.getURL()) // TODO
+		return new EmbedBuilder()
+			.setColor('#ccc5a8')
+			.setAuthor({ name: 'Scrabble - Room Match' })
+			.setTitle(title)
+			.setURL(await this.getURL());
 	}
 
 	readFromBoard([x, y]: Point, safe?: boolean): BoardTile | null {

@@ -7,7 +7,7 @@ import type { Meta } from '@/ps/games/types';
 export const meta: Meta = {
 	name: 'Chess',
 	id: GamesList.Chess,
-	aliases: ['mengyisacapitalist'],
+	aliases: ['mengyisacapitalist', 'shatranj'],
 	players: 'many',
 
 	turns: {
@@ -21,4 +21,14 @@ export const meta: Meta = {
 
 	themes: CHESS_THEMES,
 	defaultTheme,
+
+	// UGO-CODE
+	ugo: {
+		cap: 12,
+		points: {
+			win: 14,
+			draw: 11,
+			loss: 8,
+		},
+	},
 };

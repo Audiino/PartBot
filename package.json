@@ -4,14 +4,14 @@
 	"description": "A chatbot for Pokémon Showdown",
 	"main": "src/index.js",
 	"scripts": {
-		"build-configs": "bash ./scripts/build_nginx_confs.sh",
+		"debug": "./scripts/debug-games/start.sh",
 		"lint": "eslint src --ext .ts",
 		"lint:fix": "eslint src --ext .ts --fix",
 		"notify-unpushed": "sh scripts/notify_unpushed.sh",
 		"secrets-check": "sh scripts/secrets_check.sh",
 		"prettify": "prettier -w",
 		"prepare": "sh ./scripts/setup.sh",
-		"prestart": "npm run webpack && npm run tailwind",
+		"prestart": "bash ./scripts/prestart.sh",
 		"start": "ts-node --swc src/index.ts",
 		"tailwind": "npx @tailwindcss/cli -i ./src/web/styles/tailwind.css -o ./src/web/react/compiled/styles.css",
 		"test": "npm run lint && npm run tsc",
@@ -33,9 +33,10 @@
 		"express": "^5.0.1",
 		"flat-cache": "^6.1.1",
 		"mongoose": "^8.12.1",
-		"ps-client": "^4.5.3",
+		"ps-client": "^5.1.2",
 		"react": "^18.2.0",
 		"react-dom": "^18.2.0",
+		"react-json-tree": "^0.20.0",
 		"sheets-parser": "^1.1.1",
 		"tailwindcss": "^4.0.8",
 		"ts-loader": "^9.5.2",
@@ -46,6 +47,7 @@
 	},
 	"devDependencies": {
 		"@types/express": "^5.0.0",
+		"@types/livereload": "^0.9.5",
 		"@types/node": "^20.4.4",
 		"@types/react": "^18.2.48",
 		"@types/react-dom": "^18.2.18",
@@ -57,7 +59,11 @@
 		"eslint-import-resolver-typescript": "^3.6.3",
 		"eslint-plugin-import": "^2.31.0",
 		"husky": "^8.0.3",
-		"prettier": "^3.3.3",
-		"webpack-cli": "^6.0.1"
+		"livereload": "^0.9.3",
+		"prettier": "^3.3.3"
+	},
+	"optionalDependencies": {
+		"@swc/core-linux-x64-gnu": "^1.2.160",
+		"@parcel/watcher-linux-x64-glibc": "^2.5.1"
 	}
 }

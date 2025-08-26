@@ -1,13 +1,14 @@
 import { PSGames } from '@/cache';
 import { gameCache } from '@/cache/games';
-import { prefix } from '@/config/ps';
+import { isGlobalBot, prefix } from '@/config/ps';
 import { i18n } from '@/i18n';
 import { getLanguage } from '@/i18n/language';
+import { Games } from '@/ps/games/index';
 import { Button, Username } from '@/utils/components/ps';
 import { Logger } from '@/utils/logger';
 
 import type { PSRoomTranslated } from '@/i18n/types';
-import type { Meta, Player } from '@/ps/games/types';
+import type { GamesList, Meta, Player } from '@/ps/games/types';
 import type { ReactElement } from 'react';
 
 export function renderMenu(room: PSRoomTranslated, meta: Meta, isStaff: boolean): ReactElement {
@@ -24,7 +25,7 @@ export function renderMenu(room: PSRoomTranslated, meta: Meta, isStaff: boolean)
 							<>
 								{Object.values(game.players)
 									.map(player => {
-										const username = <Username name={player.name} />;
+										const username = <Username name={player.name} clickable />;
 										return player.out ? <s>{username}</s> : username;
 									})
 									.space('/')}
@@ -36,7 +37,7 @@ export function renderMenu(room: PSRoomTranslated, meta: Meta, isStaff: boolean)
 							game.turns
 								.map(turn =>
 									game.players[turn] ? (
-										<Username name={game.players[turn].name} />
+										<Username name={game.players[turn].name} clickable />
 									) : (
 										<Button value={`${cmd} join ${turn}`}>{$T('GAME.LABELS.JOIN_SIDE', { side: turn })}</Button>
 									)
@@ -45,7 +46,7 @@ export function renderMenu(room: PSRoomTranslated, meta: Meta, isStaff: boolean)
 						) : (
 							<>
 								{Object.values(game.players)
-									.map(player => <Username name={player.name} />)
+									.map(player => <Username name={player.name} clickable />)
 									.space(', ')}
 								{Object.keys(game.players).length < game.meta.maxSize! ? (
 									<Button value={`${cmd} join`} style={{ marginLeft: 10 }}>
@@ -77,12 +78,12 @@ export function renderMenu(room: PSRoomTranslated, meta: Meta, isStaff: boolean)
 	);
 }
 
-export function renderBackups(room: PSRoomTranslated, meta: Meta): ReactElement {
+export function renderBackups(room: PSRoomTranslated, gameType: GamesList | 'all'): ReactElement {
 	const $T = i18n(getLanguage(room));
 
 	const stashedGames = gameCache
-		.getByGame(room.roomid, meta.id)
-		.filter(game => !PSGames[meta.id]?.[game.id])
+		.getByGame(room.roomid, gameType)
+		.filter(game => Object.values(PSGames).every(activeGameType => !activeGameType?.[game.id]))
 		.sortBy(game => game.at, 'desc');
 	return (
 		<>
@@ -100,11 +101,18 @@ export function renderBackups(room: PSRoomTranslated, meta: Meta): ReactElement 
 					return (
 						<div>
 							<Button
-								value={`/msgroom ${room.id},/botmsg ${room.parent.status.userid},${prefix}@${room.id} ${meta.id} unstash ${game.id}`}
+								value={
+									isGlobalBot
+										? `/botmsg ${room.parent.status.userid},${prefix}@${room.id} ${game.game} unstash ${game.id}`
+										: `/msgroom ${room.id},/botmsg ${room.parent.status.userid},${prefix}@${room.id} ${game.game} unstash ${game.id}`
+								}
 							>
 								{$T('GAME.LABELS.UNSTASH')}
 							</Button>
-							<span style={{ marginLeft: 10, marginRight: 20 }}>{game.id}</span>
+							<div style={{ display: 'inline-block', width: 10 }} />
+							{gameType === 'all' ? <small>{Games[game.game].meta.name}</small> : null}
+							<span>{game.id}</span>
+							<div style={{ display: 'inline-block', width: 20 }} />
 							{players.length > 0 ? players.map(player => <Username name={player.name} />).space(', ') : '-'}
 						</div>
 					);

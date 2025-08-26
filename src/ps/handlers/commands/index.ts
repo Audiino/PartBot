@@ -88,7 +88,7 @@ export async function commandHandler(message: PSMessage, indirect: IndirectCtx |
 		if (!usePermissions(cascade.perms, context.command, message)) {
 			throw new ChatError(conceal ?? $T('ACCESS_DENIED'));
 		}
-		if (message.type === 'chat') {
+		if (message.type === 'chat' && !usePermissions('admin', null, message)) {
 			const roomConfig = PSRoomConfigs[message.target.id];
 			const lookup = context.command.join('.');
 			const isWhitelisted =
@@ -144,7 +144,10 @@ export async function commandHandler(message: PSMessage, indirect: IndirectCtx |
 		if (err instanceof Error) {
 			// TODO: Ping the user in case they're in another room! (Eg: for spoof messages)
 			message.privateReply(err.message as string);
-			if (err.name !== 'ChatError') Logger.errorLog(err);
+			if (err.name !== 'ChatError') {
+				Logger.errorLog(new Error(message.raw, { cause: err }));
+				Logger.errorLog(err);
+			}
 		} else {
 			Logger.log('A command threw a non-error value.', err);
 			Logger.errorLog(new Error('A command threw a non-error value.'));

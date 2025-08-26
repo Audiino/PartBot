@@ -2,7 +2,7 @@ import type { Language } from '@/i18n';
 import type { Perms } from '@/types/perms';
 import type { Message } from 'ps-client';
 
-export type PSMessage = Message;
+export type PSMessage = Message<'chat' | 'pm'>;
 
 export type AuthKey = Perms & string;
 
@@ -24,7 +24,7 @@ export type PSRoomConfig = {
 	roomName?: string;
 	auth?: { [key in AuthKey]?: string[] } | null;
 	tour?: {
-		timer?: [bool: number] | [autoStart: number, autoDQ: number] | null;
+		timer?: [autoStart: number, autoDQ: number] | null;
 	} | null;
 	whitelist?: string[] | null;
 	blacklist?: string[] | null;

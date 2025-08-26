@@ -3,6 +3,7 @@ import { type ReactElement } from 'react';
 import { BaseGame } from '@/ps/games/game';
 import { render, renderCloseSignups } from '@/ps/games/lightsout/render';
 import { createGrid } from '@/ps/games/utils';
+import { isUGOActive } from '@/ps/ugo';
 import { deepClone } from '@/utils/deepClone';
 import { type Point, parsePoint, stepPoint } from '@/utils/grid';
 
@@ -50,6 +51,8 @@ export class LightsOut extends BaseGame<State> {
 	}
 
 	canBroadcastFinish(): boolean {
+		// UGO-CODE
+		if (isUGOActive()) return false;
 		return this.size[0] * this.size[1] >= 25;
 	}
 
@@ -84,7 +87,7 @@ export class LightsOut extends BaseGame<State> {
 		if (this.state.board.every(row => row.every(cell => cell === false))) {
 			return this.end();
 		}
-		this.nextPlayer();
+		this.endTurn();
 	}
 
 	onEnd(type: Exclude<EndType, 'loss'>): TranslatedText {
@@ -95,6 +98,11 @@ export class LightsOut extends BaseGame<State> {
 	}
 
 	render(asPlayer: string | null): ReactElement {
-		return render.bind(this.renderCtx)(this.state, { size: this.size, player: !!asPlayer, ended: this.ended });
+		return render.bind(this.renderCtx)(this.state, {
+			size: this.size,
+			player: !!asPlayer,
+			ended: this.ended,
+			genClicks: this.state.genClicks,
+		});
 	}
 }

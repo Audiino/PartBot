@@ -1,6 +1,7 @@
 import { uploadToPastie } from 'ps-client/tools';
 
 import { PSPointsNonce, PSRoomConfigs } from '@/cache';
+import { getAllUGOPoints } from '@/cache/ugo';
 import {
 	type BulkPointsDataInput,
 	type Model as PointsModel,
@@ -11,6 +12,7 @@ import {
 	resetPoints,
 } from '@/database/points';
 import { IS_ENABLED } from '@/enabled';
+import { renderUGOBoardGamesLeaderboard } from '@/ps/commands/games/other';
 import { LB_COMMON_STYLES as COMMON_STYLES, LB_STYLES } from '@/ps/other/leaderboardStyles';
 import { toId } from '@/tools';
 import { ChatError } from '@/utils/chatError';
@@ -34,19 +36,23 @@ function getPointsType(input: string, roomPoints: NonNullable<PSRoomConfig['poin
 	return res ? [res] : null;
 }
 
-function Board({
+export function Board({
 	headers,
 	data,
-	styles,
+	asPage = false,
+	style,
+	styles = {},
 }: {
 	headers: (string | { hover: string; title: string })[];
 	data: (string | number)[][];
-	styles: { header?: CSSProperties; odd?: CSSProperties; even?: CSSProperties };
+	asPage?: boolean;
+	style?: CSSProperties;
+	styles?: { header?: CSSProperties; odd?: CSSProperties; even?: CSSProperties };
 }): ReactElement {
 	return (
-		<div style={{ maxHeight: 320, overflowY: 'scroll' }}>
+		<div style={{ ...(!asPage ? { maxHeight: 320 } : undefined), overflowY: 'scroll' }}>
 			<center>
-				<table style={{ borderCollapse: 'collapse', borderSpacing: 0, borderColor: '#aaa' }}>
+				<table style={{ borderCollapse: 'collapse', borderSpacing: 0, borderColor: '#aaa', ...style }}>
 					<colgroup>
 						{/* widths: 40, 160, 150/remaining */}
 						{headers.map((_title, index) => {
@@ -138,6 +144,7 @@ export const command: PSCommand[] = [
 			);
 		},
 	},
+	// TODO: Use PSNonces
 	{
 		name: 'addnonce',
 		help: null,
@@ -239,6 +246,13 @@ export const command: PSCommand[] = [
 		aliases: ['lb'],
 		categories: ['points'],
 		async run({ message, $T, args, broadcastHTML }) {
+			// UGO-CODE
+			if (['boardgames', 'ugo'].includes(message.target.roomid)) {
+				// Overload for Board Games
+				const data = getAllUGOPoints();
+				message.author.pageHTML(renderUGOBoardGamesLeaderboard(data, $T), { name: 'ugo' });
+				return;
+			}
 			if (!IS_ENABLED.DB) throw new ChatError($T('DISABLED.DB'));
 			// TODO: Maybe have some helper function to parse room name if not given
 			const room = message.parent.getRoom(message.type === 'chat' ? message.target.id : (args.shift() ?? ''));

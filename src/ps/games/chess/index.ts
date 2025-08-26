@@ -27,7 +27,7 @@ export class Chess extends BaseGame<State> {
 	lib: ChessLib;
 
 	log: Log[] = [];
-	winCtx?: WinCtx | { type: EndType };
+	declare winCtx?: WinCtx | { type: EndType };
 	cache: Record<string, Record<Turn, number>> = {};
 	lichessURL: string | null = null;
 
@@ -44,6 +44,7 @@ export class Chess extends BaseGame<State> {
 
 		this.lib.setHeader('Event', `Room Match ${this.id}`);
 		this.lib.setHeader('Site', `https://play.pokemonshowdown.com/${this.roomid}`);
+		this.state.pgn = '';
 	}
 
 	onStart(): ActionResponse {
@@ -112,7 +113,7 @@ export class Chess extends BaseGame<State> {
 		this.cleanup();
 		this.state.pgn = this.lib.pgn();
 
-		this.nextPlayer();
+		this.endTurn();
 	}
 
 	// Cleans up stuff like selections and draw offers
@@ -136,7 +137,7 @@ export class Chess extends BaseGame<State> {
 		}
 		if (this.lib.isDraw()) {
 			this.winCtx = { type: 'draw' };
-			return this.$T('GAME.DRAW', { players: [this.players.W, this.players.B.name].list(this.$T) });
+			return this.$T('GAME.DRAW', { players: [this.players.W.name, this.players.B.name].list(this.$T) });
 		}
 		if (this.lib.isCheckmate()) {
 			const winner = this.players[this.turn!];
@@ -170,7 +171,7 @@ export class Chess extends BaseGame<State> {
 				iconURL: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Chess_tile_kl.svg/1200px-Chess_tile_kl.svg.png',
 			})
 			.setTitle(`${this.players.W.name} vs ${this.players.B.name}`)
-			.setURL(this.lichessURL);
+			.setURL(await this.getURL());
 	}
 
 	render(side: Turn | null) {
@@ -179,15 +180,14 @@ export class Chess extends BaseGame<State> {
 			showMoves: side === this.turn ? this.showMoves : [],
 			selected: side === this.turn ? this.selected : null,
 			isActive: side === this.turn,
+			lastMove: this.lib.history({ verbose: true }).at(-1) ?? null,
 			side,
 			id: this.id,
 			turn: this.turn!,
 			theme: this.meta.themes[this.theme!].colors,
-			small: false,
 		};
 		if (this.winCtx) {
 			ctx.header = this.$T('GAME.GAME_ENDED');
-			if (side === null) ctx.small = true; // chatroom
 		} else if (side === this.turn) {
 			ctx.header = this.$T('GAME.YOUR_TURN');
 			if (this.selected) {

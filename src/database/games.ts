@@ -1,10 +1,19 @@
+import { Temporal } from '@js-temporal/polyfill';
 import mongoose, { type HydratedDocument } from 'mongoose';
+import { pokedex } from 'ps-client/data';
 
 import { IS_ENABLED } from '@/enabled';
+import { ScrabbleMods } from '@/ps/games/scrabble/constants';
+import { GamesList } from '@/ps/games/types';
+import { UGO_2025_END, UGO_2025_START } from '@/ps/ugo/constants';
+import { toId } from '@/tools';
+import { instantInRange } from '@/utils/timeInRange';
 
+import type { Log as ScrabbleLog } from '@/ps/games/scrabble/logs';
+import type { WinCtx as ScrabbleWinCtx } from '@/ps/games/scrabble/types';
 import type { Player } from '@/ps/games/types';
 
-const schema = new mongoose.Schema({
+const schema = new mongoose.Schema<GameModel>({
 	id: {
 		type: String,
 		required: true,
@@ -19,6 +28,7 @@ const schema = new mongoose.Schema({
 		type: String,
 		required: true,
 	},
+	seed: Number,
 	players: {
 		type: Map,
 		of: {
@@ -34,6 +44,7 @@ const schema = new mongoose.Schema({
 				type: String,
 				required: true,
 			},
+			out: Boolean,
 		},
 		required: true,
 	},
@@ -59,12 +70,13 @@ export interface GameModel {
 	game: string;
 	mod?: string | null | undefined;
 	room: string;
+	seed?: number | null;
 	players: Map<string, Player>;
 	created: Date;
 	started: Date | null;
 	ended: Date;
 	log: string[];
-	winCtx?: unknown;
+	winCtx?: { type: 'win'; winner: Player } | unknown;
 }
 const model = mongoose.model('game', schema, 'games', { overwriteModels: true });
 
@@ -79,4 +91,75 @@ export async function getGameById(gameType: string, gameId: string): Promise<Hyd
 	const game = await model.findOne({ game: gameType, id });
 	if (!game) throw new Error(`Unable to find a game of ${gameType} with ID ${id}.`);
 	return game;
+}
+
+// UGO-CODE
+export type ScrabbleDexEntry = {
+	pokemon: string;
+	pokemonName: string;
+	num: number;
+	by: string;
+	byName: string | null;
+	at: Date;
+	gameId: string;
+	mod: string;
+	won: boolean;
+};
+export async function getScrabbleDex(): Promise<ScrabbleDexEntry[] | null> {
+	if (!IS_ENABLED.DB) return null;
+	const scrabbleGames = await model.find({ game: GamesList.Scrabble, mod: [ScrabbleMods.CRAZYMONS, ScrabbleMods.POKEMON] }).lean();
+	return scrabbleGames
+		.filter(game => {
+			const time = Temporal.Instant.fromEpochMilliseconds(game.created.getTime());
+			return instantInRange(time, [UGO_2025_START, UGO_2025_END]);
+		})
+		.flatMap(game => {
+			const baseCtx = { gameId: game.id, mod: game.mod! };
+			const winCtx = game.winCtx as ScrabbleWinCtx | undefined;
+			const winners = winCtx?.type === 'win' ? winCtx.winnerIds : [];
+			const logs = game.log.map<ScrabbleLog>(log => JSON.parse(log));
+			if (winCtx?.type === 'dq' || winCtx?.type === 'regular') {
+				const leftUsers = logs.filter(log => log.action === 'dq' || log.action === 'forfeit').map(log => log.turn);
+				if (winCtx.type === 'dq')
+					winners.push(
+						...Object.values(game.players)
+							.map(player => player.turn)
+							.filter(player => !leftUsers.includes(player))
+					);
+				else if (winCtx.type === 'regular' && logs.filter(log => log.action === 'play').length > 20) {
+					const points: Record<string, number> = {};
+					logs.forEach(log => {
+						if (log.action === 'play') {
+							points[log.turn] ??= 0;
+							points[log.turn] += log.ctx.points.total;
+						}
+					});
+					const players = Object.entries(points).filter(([player]) => !leftUsers.includes(player));
+					const maxPoints = Math.max(...players.map(([_player, score]) => score));
+					winners.push(...players.filter(([_player, score]) => score === maxPoints).map(([player]) => player));
+				}
+			}
+			return logs
+				.filterMap<ScrabbleDexEntry[]>(log => {
+					if (log.action !== 'play') return;
+					const words = Object.keys(log.ctx.words).map(toId).unique();
+					return words.filterMap<ScrabbleDexEntry>(word => {
+						if (!(word in pokedex)) return;
+						const mon = pokedex[word];
+						if (mon.num <= 0) return;
+						return {
+							...baseCtx,
+							pokemon: word,
+							pokemonName: mon.name,
+							num: mon.num,
+							by: log.turn,
+							byName: game.players[log.turn]?.name ?? null,
+							at: log.time,
+							won: winners.includes(log.turn),
+						};
+					});
+				})
+				.flat();
+		})
+		.filter(entry => entry.won);
 }

@@ -1,5 +1,3 @@
-import { Temporal } from '@js-temporal/polyfill';
-
 import { PSCommands, PSPointsNonce, PSRoomConfigs } from '@/cache';
 import { prefix } from '@/config/ps';
 import { type BulkPointsDataInput, bulkAddPoints } from '@/database/points';
@@ -13,6 +11,7 @@ import { toId } from '@/tools';
 import { Username } from '@/utils/components';
 import { Form } from '@/utils/components/ps';
 import { Logger } from '@/utils/logger';
+import { mapValues } from '@/utils/map';
 import { pluralize } from '@/utils/pluralize';
 import { randomString } from '@/utils/random';
 
@@ -48,26 +47,12 @@ export type BracketTree = {
 	};
 };
 
-// TODO: Maybe move this to utils
-function inRange(time: Temporal.PlainTime, range: [Temporal.PlainTime, Temporal.PlainTime]): boolean {
-	const rangeCompare = Temporal.PlainTime.compare(...range);
-	if (rangeCompare === 0) return Temporal.PlainTime.compare(time, range[0]) === 0;
-
-	const insideRange = rangeCompare === -1;
-	if (insideRange) {
-		return Temporal.PlainTime.compare(time, range[0]) === 1 && Temporal.PlainTime.compare(time, range[1]) === -1;
-	} else {
-		return Temporal.PlainTime.compare(time, range[0]) === -1 && Temporal.PlainTime.compare(time, range[1]) === 1;
-	}
-}
-
 function labelPoints(data: Record<string, number>, pointsType: string): Record<string, Record<string, number>> {
-	// TODO: Add mapValues
-	return Object.fromEntries(Object.entries(data).map(([user, amount]) => [user, { [pointsType]: amount }]));
+	return mapValues(data, amount => ({ [pointsType]: amount }));
 }
 
 function toBulkData(data: Record<string, Record<string, number>>): BulkPointsDataInput {
-	return Object.fromEntries(Object.entries(data).map(([user, points]) => [user, { id: toId(user), name: user, points }]));
+	return mapValues(data, (points, user) => ({ id: toId(user), name: user, points }));
 }
 
 export function tourHandler(this: Client, roomId: string, line: string, isIntro?: boolean): void {
@@ -88,6 +73,11 @@ export function tourHandler(this: Client, roomId: string, line: string, isIntro?
 				getChannel(ANNOUNCEMENTS_CHANNEL)?.send(
 					`${ROLES.PS_TOURS} A ${name} tournament has been created in [the room](https://play.pokemonshowdown.com/petmods)!`
 				);
+			}
+			const roomConfig = PSRoomConfigs[roomId];
+			if (roomConfig?.tour?.timer) {
+				const [autostart, autoDQ] = roomConfig.tour.timer;
+				room.send(`/tour autostart ${autostart}\n/tour autodq ${autoDQ}`);
 			}
 			break;
 		}

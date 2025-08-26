@@ -10,35 +10,50 @@ declare global {
 		count(): Record<T & (string | number), number>;
 		count(map: true): Map<T, number>;
 		group(size: number): T[][];
+		groupBy<Key extends string | number>(classification: (element: T) => Key): Partial<Record<Key, T[]>>;
+		/**
+		 * filterMap runs map. Only results that are NOT exactly 'undefined' are returned.
+		 */
 		filterMap<X>(cb: (element: T, index: number, thisArray: T[]) => X | undefined): X[];
 		list($T?: TranslationFn | string): string;
 		random(rng?: RNGSource): T | null;
-		remove(...toRemove: T[]): T[];
+		remove(...toRemove: T[]): boolean;
 		sample(amount: number, rng?: RNGSource): T[];
 		shuffle(rng?: RNGSource): T[];
 		/** Default order is ascending */
 		sortBy(getSort: ((term: T, thisArray: T[]) => unknown) | null, dir?: 'asc' | 'desc'): T[];
 		space<S = unknown>(spacer: S): (T | S)[];
-		sum(): T;
+		sum(): T extends number ? number : never;
 		unique(): T[];
 	}
 	interface ReadonlyArray<T> {
 		access<V = ArrayAtom<T>>(pos: number[]): V;
 		count(): Record<T & (string | number), number>;
 		count(map: true): Map<T, number>;
+		/**
+		 * filterMap runs map. Only results that are NOT exactly 'undefined' are returned.
+		 */
 		filterMap<X>(cb: (element: T, index: number, thisArray: T[]) => X | undefined): X[];
 		group(size: number): T[][];
+		groupBy<Key extends string>(classification: (element: T) => Key): Partial<Record<Key, T[]>>;
 		list($T?: TranslationFn): string;
 		random(rng?: RNGSource): T | null;
 		sample(amount: number, rng?: RNGSource): T[];
 		space<S = unknown>(spacer: S): (T | S)[];
-		sum(): T;
+		sum(): T extends number ? number : never;
 		unique(): T[];
 	}
 
 	interface String {
 		gsub(match: RegExp, replace: string | ((arg: string, ...captures: string[]) => string)): string;
-		lazySplit(match: string | RegExp, cases: number): string[];
+
+		/**
+		 * Split the string exactly as many times as needed.
+		 * @param matcher Pattern/string to split by.
+		 * @param cases Number of cases to split.
+		 * @example 'a b c'.lazySplit(' ', 1); // ['a', 'bc']
+		 */
+		lazySplit(matcher: string | RegExp, cases: number): string[];
 	}
 
 	interface Number {
@@ -119,6 +134,19 @@ Object.defineProperties(Array.prototype, {
 			return [];
 		},
 	},
+	groupBy: {
+		enumerable: false,
+		writable: false,
+		configurable: false,
+		value: function <T, Key extends string>(this: T[], classification: (element: T) => Key): Partial<Record<Key, T[]>> {
+			return this.reduce<Partial<Record<Key, T[]>>>((acc, current) => {
+				const key = classification(current);
+				if (acc[key]) acc[key].push(current);
+				else acc[key] = [current];
+				return acc;
+			}, {});
+		},
+	},
 	list: {
 		enumerable: false,
 		writable: false,
@@ -190,14 +218,29 @@ Object.defineProperties(Array.prototype, {
 		enumerable: false,
 		writable: false,
 		configurable: false,
-		value: function <T, W = number>(this: T[], getSort: ((term: T, thisArray: T[]) => W) | null, dir?: 'asc' | 'desc'): T[] {
+		value: function <T, W extends string | number | string[] | number[] = number>(
+			this: T[],
+			getSort: ((term: T, thisArray: T[]) => W) | null,
+			dir?: 'asc' | 'desc'
+		): T[] {
 			const cache = this.reduce<Map<T, W>>((map, term) => {
 				map.set(term, getSort ? getSort(term, this) : (term as unknown as W));
 				return map;
 			}, new Map());
-			return this.sort((a, b) =>
-				cache.get(a)! === cache.get(b)! ? 0 : (dir === 'desc' ? cache.get(a)! < cache.get(b)! : cache.get(b)! < cache.get(a)!) ? 1 : -1
-			);
+			return this.sort((a, b) => {
+				const cachedA = cache.get(a)!;
+				const cachedB = cache.get(b)!;
+				const lookupA: (string | number)[] = Array.isArray(cachedA) ? cachedA : [cachedA];
+				const lookupB: (string | number)[] = Array.isArray(cachedB) ? cachedB : [cachedB];
+
+				for (let i = 0; i < lookupA.length; i++) {
+					if (lookupA[i] === lookupB[i]) continue;
+					const AisBigger = lookupA[i] > lookupB[i];
+					return (dir === 'desc' ? -1 : 1) * (AisBigger ? 1 : -1);
+				}
+
+				return 0;
+			});
 		},
 	},
 	space: {

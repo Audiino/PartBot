@@ -1,11 +1,13 @@
 import { PSGames } from '@/cache';
 import { gameCache } from '@/cache/games';
-import { prefix } from '@/config/ps';
+import { addUGOPoints, getUGOPlayed, setUGOPlayed } from '@/cache/ugo';
+import { isGlobalBot, prefix } from '@/config/ps';
 import { uploadGame } from '@/database/games';
 import { BOT_LOG_CHANNEL } from '@/discord/constants/servers/boardgames';
 import { getChannel } from '@/discord/loaders/channels';
 import { IS_ENABLED } from '@/enabled';
-import { renderCloseSignups, renderSignups } from '@/ps/games/render';
+import { Small, renderCloseSignups, renderSignups } from '@/ps/games/render';
+import { checkUGO } from '@/ps/games/utils';
 import { toHumanTime, toId } from '@/tools';
 import { ChatError } from '@/utils/chatError';
 import { Logger } from '@/utils/logger';
@@ -83,6 +85,9 @@ export class BaseGame<State extends BaseState> {
 	theme?: string;
 	mod?: string | null;
 
+	winCtx?: { type: 'win'; winner: Player } | { type: 'win'; winnerIds: string[] } | { type: 'draw' } | { type: string };
+	forcewinPlayers?: string[];
+
 	// Game-provided methods:
 	render(side: State['turn'] | null): ReactElement;
 	render() {
@@ -97,8 +102,7 @@ export class BaseGame<State extends BaseState> {
 
 	onAddPlayer?(user: User, ctx: string): ActionResponse;
 	onAfterAddPlayer?(player: Player): void;
-	onLeavePlayer?(player: Player, ctx: string | User): ActionResponse;
-	onForfeitPlayer?(player: Player, ctx: string | User): ActionResponse;
+	onRemovePlayer?(player: Player, ctx: string | User): ActionResponse<'end' | null>;
 	onReplacePlayer?(turn: BaseState['turn'], withPlayer: User): ActionResponse;
 	onAfterReplacePlayer?(player: Player): void;
 	onStart?(): ActionResponse;
@@ -126,8 +130,12 @@ export class BaseGame<State extends BaseState> {
 
 		this.meta = ctx.meta;
 		this.renderCtx = {
-			msg: `/msgroom ${ctx.room.id},/botmsg ${this.parent.status.userid},${prefix}@${ctx.id}`,
-			simpleMsg: `/msgroom ${ctx.room.id},/botmsg ${this.parent.status.userid},${prefix}@${ctx.room.id} ${ctx.meta.id}`,
+			msg: isGlobalBot
+				? `/botmsg ${this.parent.status.userid},${prefix}@${ctx.id}`
+				: `/msgroom ${ctx.room.id},/botmsg ${this.parent.status.userid},${prefix}@${ctx.id}`,
+			simpleMsg: isGlobalBot
+				? `/botmsg ${this.parent.status.userid},${prefix}@${ctx.room.id} ${ctx.meta.id}`
+				: `/msgroom ${ctx.room.id},/botmsg ${this.parent.status.userid},${prefix}@${ctx.room.id} ${ctx.meta.id}`,
 		};
 
 		if (ctx.meta.turns) this.turns = Object.keys(ctx.meta.turns);
@@ -174,6 +182,8 @@ export class BaseGame<State extends BaseState> {
 						break;
 					}
 					case 'prngCalls': {
+						// This is needed since we still have some game backups that don't have prngCalls; can safely remove after a while
+						if (typeof this.prngCalls !== 'number') break;
 						this.prngCalls = parsedBackup.prngCalls;
 						// Call prng() the required number of times
 						this.prngCalls.times(() => this.prng());
@@ -197,6 +207,7 @@ export class BaseGame<State extends BaseState> {
 
 	setTimer(comment: string): void {
 		if (!this.timerLength || !this.pokeTimerLength) return;
+		if (this.endedAt) return;
 		this.clearTimer();
 
 		const turn = this.turn!;
@@ -243,6 +254,7 @@ export class BaseGame<State extends BaseState> {
 	}
 	backup(): void {
 		if (this.meta.players === 'single') return; // Don't back up single-player games
+		if (this.endedAt) return;
 		const backup = this.serialize();
 		gameCache.set({ id: this.id, room: this.roomid, game: this.meta.id, backup, at: Date.now() });
 	}
@@ -270,7 +282,6 @@ export class BaseGame<State extends BaseState> {
 			if (staffHTML) this.room.sendHTML(staffHTML, { name: this.id, rank: '+', change: true });
 		}
 	}
-	// TODO: Handle max players state
 	renderCloseSignups?(): ReactElement;
 	closeSignups(change = true): void {
 		const closeSignupsHTML = (this.renderCloseSignups ?? renderCloseSignups).bind(this)();
@@ -311,9 +322,26 @@ export class BaseGame<State extends BaseState> {
 			if (!onAddPlayer.success) return onAddPlayer;
 		}
 		this.players[newPlayer.turn] = newPlayer;
+		// UGO-CODE
+		if (checkUGO(this)) {
+			const playedToday = getUGOPlayed(this.meta.id, newPlayer.id);
+			if (playedToday >= this.meta.ugo.cap)
+				this.room.privateSend(
+					newPlayer.id,
+					// eslint-disable-next-line max-len -- Welp
+					`Hi, you've already played ${playedToday} games of ${this.meta.name} today! You can play more, but you won't get UGO points for them until the count resets at midnight UTC.` as NoTranslate
+				);
+			else {
+				this.room.privateSend(
+					newPlayer.id,
+					(`Hi, this is game #${playedToday + 1} of ${this.meta.name} that you've joined today.` +
+						` Only the first ${this.meta.ugo.cap} games will count for UGO points.`) as NoTranslate
+				);
+			}
+		}
 		if (this.meta.players === 'single' || (Array.isArray(availableSlots) && availableSlots.length === 1) || availableSlots === 1) {
 			// Join was successful and game is now full
-			if (this.meta.players === 'single' || this.meta.autostart) this.start();
+			this.start();
 			this.onAfterAddPlayer?.(newPlayer);
 			this.backup();
 			return { success: true, data: { started: true, as: newPlayer.turn } };
@@ -328,9 +356,9 @@ export class BaseGame<State extends BaseState> {
 		const staffAction = typeof ctx === 'string';
 		const player = Object.values(this.players).find(p => p.id === (typeof ctx === 'string' ? ctx : ctx.id));
 		if (!player) return { success: false, error: this.$T('GAME.NOT_PLAYING') };
+		const removePlayer = this.onRemovePlayer?.(player, ctx);
+		if (removePlayer?.success === false) return removePlayer;
 		if (this.started) {
-			const forfeitPlayer = this.onForfeitPlayer?.(player, ctx);
-			if (forfeitPlayer?.success === false) return forfeitPlayer;
 			player.out = true;
 			this.spectators.push(player.id);
 			this.log.push({ action: staffAction ? 'dq' : 'forfeit', turn: player.turn, time: new Date(), ctx: null });
@@ -341,18 +369,22 @@ export class BaseGame<State extends BaseState> {
 					cb: () => {
 						const playersLeft = Object.values(this.players).filter((player: Player) => !player.out);
 						if (playersLeft.length <= 1) this.end('dq');
-						else if (this.turn === player.turn) this.nextPlayer(); // Needs to be run AFTER consumer has finished DQing
+						else if (removePlayer?.data === 'end') this.end();
+						else if (this.turn === player.turn) this.endTurn(); // Needs to be run AFTER consumer has finished DQing
 						this.backup();
 					},
 				},
 			};
 		}
-		const removePlayer = this.onLeavePlayer?.(player, ctx);
-		if (removePlayer?.success === false) return removePlayer;
 		delete this.players[player.turn];
 		return {
 			success: true,
-			data: { message: this.$T(staffAction ? 'GAME.REMOVED' : 'GAME.LEFT', { player: player.name }) },
+			data: {
+				message: this.$T(staffAction ? 'GAME.REMOVED' : 'GAME.LEFT', { player: player.name }),
+				cb: () => {
+					if (removePlayer?.data === 'end') this.end('dq');
+				},
+			},
 		};
 	}
 
@@ -373,8 +405,12 @@ export class BaseGame<State extends BaseState> {
 		this.players[newTurn] = { ...oldPlayer, ...assign, turn: newTurn };
 		if (!this.meta.turns) this.turns.splice(this.turns.indexOf(turn), 1, newTurn);
 		if (this.turn === turn) this.turn = newTurn;
-		this.spectators.remove(oldPlayer.id);
+		this.spectators.remove(oldPlayer.id, withPlayer.id);
 		this.onAfterReplacePlayer?.(this.players[newTurn]);
+		if (checkUGO(this)) {
+			setUGOPlayed(this.meta.id, withPlayer.id, prev => prev + 1);
+			setUGOPlayed(this.meta.id, oldPlayer.id, prev => prev - 1);
+		}
 		this.backup();
 		return { success: true, data: this.$T('GAME.SUB', { in: withPlayer.name, out: oldPlayer.name }) };
 	}
@@ -406,11 +442,16 @@ export class BaseGame<State extends BaseState> {
 		if (tryStart?.success === false) return tryStart;
 		this.started = true;
 		if (!this.turns.length) this.turns = Object.keys(this.players).shuffle(this.prng);
-		this.nextPlayer();
+		this.endTurn();
 		this.startedAt = new Date();
 		this.setTimer('Game started');
 		this.onAfterStart?.();
 		this.backup();
+		if (checkUGO(this)) {
+			Object.values(this.players).forEach(player => {
+				setUGOPlayed(this.meta.id, player.id, prev => prev + 1);
+			});
+		}
 		return { success: true, data: null };
 	}
 
@@ -421,7 +462,7 @@ export class BaseGame<State extends BaseState> {
 	}
 
 	// Increments turn as needed and backs up state.
-	nextPlayer(): State['turn'] | null {
+	endTurn(): State['turn'] | null {
 		let current = this.turn;
 		do {
 			current = this.getNext(current);
@@ -449,7 +490,7 @@ export class BaseGame<State extends BaseState> {
 	update(user?: string): void {
 		if (!this.started) return;
 		if (user) {
-			const asPlayer = Object.values(this.players).find(player => player.id === user);
+			const asPlayer = this.getPlayer(user);
 			if (asPlayer && !asPlayer.out) return this.sendHTML(asPlayer.id, this.render(asPlayer.turn));
 			if (this.spectators.includes(user)) return this.sendHTML(user, this.render(null));
 			this.throw('GAME.NON_PLAYER_OR_SPEC');
@@ -469,12 +510,30 @@ export class BaseGame<State extends BaseState> {
 		return `${process.env.WEB_URL}/${this.meta.id}/${this.id.replace(/^#/, '')}`;
 	}
 
+	forceWin(player: Player): void {
+		if (!this.started) this.throw('GAME.NOT_STARTED');
+		this.forcewinPlayers = Object.values(this.players)
+			.filter(activePlayer => activePlayer.id !== player.id && !activePlayer.out)
+			.map(activePlayer => activePlayer.turn);
+		this.forcewinPlayers.forEach(turn => (this.players[turn].out = true));
+		this.end('dq');
+	}
+
 	end(type?: EndType): void {
-		const message = this.onEnd(type);
+		let message = this.onEnd(type);
+		// Override message for forcewin
+		if (type === 'dq' && this.forcewinPlayers) {
+			const lastPlayers = Object.values(this.players).filter(player => !player.out);
+			if (lastPlayers.length !== 1) {
+				Logger.errorLog(new Error(JSON.stringify({ players: this.players, state: this.state })));
+				throw new Error(`Found ${lastPlayers.length} winners in a forcewin!`);
+			}
+			message = this.$T('GAME.FORCE_WIN', { player: lastPlayers[0].name, id: this.id });
+		}
 		this.clearTimer();
 		this.update();
 		if (this.started && (this.meta.players === 'many' || this.canBroadcastFinish?.())) {
-			this.room.sendHTML(this.render(null));
+			this.room.sendHTML(Small({ children: this.render(null) }));
 		}
 		this.endedAt = new Date();
 		this.room.send(message);
@@ -494,6 +553,7 @@ export class BaseGame<State extends BaseState> {
 				game: this.meta.id,
 				mod: this.mod,
 				room: this.roomid,
+				seed: this.seed,
 				players: new Map(Object.entries(this.players)),
 				log: this.log.map(entry => JSON.stringify(entry)),
 				created: this.createdAt,
@@ -511,6 +571,66 @@ export class BaseGame<State extends BaseState> {
 					this.room.send(this.$T('GAME.UPLOAD_FAILED', { id: this.id }));
 				});
 		}
+
+		// UGO-CODE
+		if (checkUGO(this) && this.winCtx) {
+			if (this.winCtx.type === 'win' || this.winCtx.type === 'draw' || type === 'dq') {
+				const allPlayers = Object.values(this.players);
+				const players = allPlayers
+					.filter(player => !player.out || this.forcewinPlayers?.includes(player.turn))
+					.map(player => player.turn);
+
+				const winners =
+					type === 'dq' && players.length === 1
+						? players
+						: !('type' in this.winCtx)
+							? []
+							: this.winCtx.type === 'win'
+								? 'winner' in this.winCtx
+									? [this.winCtx.winner.turn ?? this.winCtx.winner.id]
+									: 'winnerIds' in this.winCtx
+										? (this.winCtx.winnerIds as string[])
+										: []
+								: this.winCtx.type === 'draw'
+									? Object.values(this.players).map(player => player.turn)
+									: [];
+
+				const pointsToAdd: Record<string, number> = {};
+
+				if (winners.length === 1) {
+					pointsToAdd[this.players[winners[0]].name] =
+						typeof this.meta.ugo.points.win === 'function' ? this.meta.ugo.points.win(allPlayers.length) : this.meta.ugo.points.win;
+				} else if (winners.length > 1) {
+					winners.forEach(winner => (pointsToAdd[this.players[winner].name] = this.meta.ugo.points.draw ?? this.meta.ugo.points.loss));
+				}
+
+				players.forEach(turn => {
+					if (!winners.includes(turn)) {
+						pointsToAdd[this.players[turn].name] = this.meta.ugo.points.loss;
+					}
+				});
+
+				Object.keys(pointsToAdd).forEach(user => {
+					if (getUGOPlayed(this.meta.id, user) > this.meta.ugo.cap) delete pointsToAdd[user];
+				});
+
+				Object.entries(pointsToAdd).forEach(([user, points]) => {
+					this.room.privateSend(user, `You have received ${points} points for ${this.meta.name} in Board Games!` as NoTranslate);
+				});
+
+				addUGOPoints.call(this.parent, pointsToAdd, this.meta.id);
+			} else {
+				if (type === 'force') {
+					Object.values(this.players).forEach(player => {
+						if (!player.out) {
+							this.room.privateSend(player.id, 'This game will not count towards your daily cap.' as NoTranslate);
+							setUGOPlayed(this.meta.id, player.id, prev => prev - 1);
+						}
+					});
+				}
+			}
+		}
+
 		// Delete from cache
 		delete PSGames[this.meta.id]![this.id];
 		gameCache.delete(this.id);

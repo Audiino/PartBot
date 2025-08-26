@@ -1,6 +1,13 @@
 import { PSGames } from '@/cache';
+import { getAllUGOPoints } from '@/cache/ugo';
 import { prefix } from '@/config/ps';
+import { getScrabbleDex } from '@/database/games';
+import { IS_ENABLED } from '@/enabled';
+import { i18n } from '@/i18n';
+import { getLanguage } from '@/i18n/language';
+import { renderScrabbleDexLeaderboard, renderUGOBoardGamesLeaderboard } from '@/ps/commands/games/other';
 import { toId } from '@/tools';
+import { ChatError } from '@/utils/chatError';
 
 import type { PSMessage } from '@/types/ps';
 
@@ -10,7 +17,26 @@ export function interfaceHandler(message: PSMessage) {
 	if (message.author.userid === message.parent.status.userid) return;
 	if (message.type === 'pm') {
 		// Handle page requests
-		if (message.content.startsWith('|requestpage|')) return; // currently nothing; might do stuff with this later
+		if (message.content.startsWith('|requestpage|')) {
+			const $T = i18n(getLanguage(message.target));
+			const [_, _requestPage, _user, pageId] = message.content.lazySplit('|', 3);
+			switch (pageId) {
+				case 'scrabbledex': {
+					if (!IS_ENABLED.DB) throw new ChatError($T('DISABLED.DB'));
+					getScrabbleDex().then(entries => {
+						message.author.pageHTML(renderScrabbleDexLeaderboard(entries!, $T), { name: pageId });
+					});
+					break;
+				}
+				case 'ugo': {
+					const data = getAllUGOPoints();
+					message.author.pageHTML(renderUGOBoardGamesLeaderboard(data, $T), { name: pageId });
+					break;
+				}
+			}
+
+			return;
+		}
 		if (message.content.startsWith('|closepage|')) {
 			const match = message.content.match(/^\|closepage\|(?<user>.*?)\|(?<pageId>\w+)$/);
 			if (!match) return message.reply('...hmm hmm hmmmmmmmm very sus');

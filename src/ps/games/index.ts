@@ -7,6 +7,7 @@ import { Mastermind, meta as MastermindMeta } from '@/ps/games/mastermind';
 import { Othello, meta as OthelloMeta } from '@/ps/games/othello';
 import { Scrabble, meta as ScrabbleMeta } from '@/ps/games/scrabble';
 import { SnakesLadders, meta as SnakesLaddersMeta } from '@/ps/games/snakesladders';
+import { Splendor, meta as SplendorMeta } from '@/ps/games/splendor';
 import { GamesList, type Meta } from '@/ps/games/types';
 
 export const Games = {
@@ -45,6 +46,10 @@ export const Games = {
 	[GamesList.SnakesLadders]: {
 		meta: SnakesLaddersMeta,
 		instance: SnakesLadders,
+	},
+	[GamesList.Splendor]: {
+		meta: SplendorMeta,
+		instance: Splendor,
 	},
 } satisfies Readonly<Record<GamesList, Readonly<{ meta: Meta; instance: unknown }>>>;
 export type Games = typeof Games;

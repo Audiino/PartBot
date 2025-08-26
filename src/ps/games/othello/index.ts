@@ -17,7 +17,7 @@ export { meta } from '@/ps/games/othello/meta';
 
 export class Othello extends BaseGame<State> {
 	log: Log[] = [];
-	winCtx?: WinCtx | { type: EndType };
+	declare winCtx?: WinCtx | { type: EndType };
 	cache: Record<string, Record<Turn, number>> = {};
 	constructor(ctx: BaseContext) {
 		super(ctx);
@@ -85,7 +85,7 @@ export class Othello extends BaseGame<State> {
 		board[i][j] = turn;
 		this.log.push({ action: 'play', time: new Date(), turn, ctx: [i, j] });
 
-		const next = this.nextPlayer();
+		const next = this.endTurn();
 		if (!next) this.end();
 		return board;
 	}

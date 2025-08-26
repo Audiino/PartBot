@@ -15,7 +15,7 @@ export type Meta = Readonly<
 		name: string;
 		id: GamesList;
 		aliases?: readonly string[];
-		/** Only for single-player games. Required for those. */
+		/** Required for single-player games. Otherwise only shown in leaderboards. */
 		abbr?: string;
 
 		players: 'single' | 'many';
@@ -25,10 +25,19 @@ export type Meta = Readonly<
 
 		mods?: Readonly<{ list: ModEnum<string>; data: ModData<string> }>;
 
-		/** @default Assume true */
+		/** Whether the game will only start automatically. */
 		autostart?: boolean;
 		timer?: number | false;
 		pokeTimer?: number | false | undefined;
+
+		// UGO-CODE
+		/**
+		 * Metadata for automatic UGO points.
+		 */
+		ugo: {
+			points: { win: number | ((playerCount: number) => number); loss: number; draw?: number };
+			cap: number;
+		} | null;
 	} & ({ themes: Record<string, Theme>; defaultTheme: string } | { themes?: undefined; defaultTheme?: undefined })
 >;
 
@@ -43,6 +52,7 @@ export enum GamesList {
 	Othello = 'othello',
 	Scrabble = 'scrabble',
 	SnakesLadders = 'snakesladders',
+	Splendor = 'splendor',
 }
 
 export interface Player {
@@ -59,6 +69,7 @@ export type ActionResponse<T = null> = { success: true; data: T } | { success: f
 export type EndType = 'regular' | 'force' | 'dq' | 'loss';
 
 export type BaseLog = { action: string; time: Date; turn: string | null; ctx: unknown };
+export type BaseLogAction = { action: 'dq' | 'forfeit' | 'skip'; turn: string; ctx: null } & BaseLog;
 
 export type CommonLog<Turn extends string = string> = Satisfies<
 	BaseLog,

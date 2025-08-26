@@ -9,7 +9,8 @@ import { ChatError } from '@/utils/chatError';
 
 import type { NoTranslate, ToTranslate, TranslationFn } from '@/i18n/types';
 import type { CommonGame } from '@/ps/games/game';
-import type { PSCommand } from '@/types/chat';
+import type { BaseModEntry } from '@/ps/games/mods';
+import type { PSCommand, PSCommandChild } from '@/types/chat';
 import type { Room } from 'ps-client';
 import type { HTMLopts } from 'ps-client/classes/common';
 
@@ -27,6 +28,11 @@ type SearchContext =
 	| { action: 'any' };
 
 type RoomContext = { room: Room; $T: TranslationFn };
+
+function conditionalCommand(condition: unknown, ...subcommands: PSCommandChild[]): PSCommand['children'] {
+	if (!condition) return {};
+	return Object.fromEntries(subcommands.map(subcommand => [subcommand.name, subcommand]));
+}
 
 export const command: PSCommand[] = Object.entries(Games).map(([_gameId, Game]): PSCommand => {
 	const gameId = _gameId as keyof Games;
@@ -141,7 +147,7 @@ export const command: PSCommand[] = Object.entries(Games).map(([_gameId, Game]):
 		flags: {
 			routePMs: true,
 		},
-		help: 'Game module.',
+		help: `Game module for ${Game.meta.name}. See subcommands.`,
 		syntax: 'CMD',
 		async run({ run, command }) {
 			return run(`help ${command.join(' ')}`);
@@ -213,23 +219,20 @@ export const command: PSCommand[] = Object.entries(Games).map(([_gameId, Game]):
 					}
 				},
 			},
-			...(Game.meta.autostart === false
-				? ({
-						start: {
-							name: 'start',
-							aliases: ['s', 'go', 'g'],
-							help: 'Starts a game if it does not have an auto-start.',
-							syntax: 'CMD [id]',
-							perms: Symbol.for('games.create'),
-							async run({ message, arg, $T }): Promise<void> {
-								const { game } = getGame(arg, { action: 'start', user: message.author.id }, { room: message.target, $T });
-								if (!game.startable()) throw new ChatError($T('GAME.CANNOT_START'));
-								game.start();
-								game.closeSignups(false);
-							},
-						},
-					} satisfies PSCommand['children'])
-				: {}),
+			...conditionalCommand(Game.meta.autostart === false, {
+				name: 'start',
+				aliases: ['s', 'go', 'g'],
+				help: 'Starts a game if it does not have an auto-start.',
+				syntax: 'CMD [id]',
+				perms: Symbol.for('games.create'),
+				async run({ message, arg, $T }): Promise<void> {
+					const { game } = getGame(arg, { action: 'start', user: message.author.id }, { room: message.target, $T });
+					if (game.started) throw new ChatError($T('GAME.ALREADY_STARTED'));
+					if (!game.startable()) throw new ChatError($T('GAME.CANNOT_START'));
+					game.start();
+					game.closeSignups(false);
+				},
+			}),
 			reaction: {
 				name: 'reaction',
 				aliases: ['x', '!!'],
@@ -241,17 +244,16 @@ export const command: PSCommand[] = Object.entries(Games).map(([_gameId, Game]):
 					game.action(message.author, ctx, true);
 				},
 			},
-			audience: {
+			...conditionalCommand('external' in Game.instance.prototype, {
 				name: 'audience',
 				help: 'Allows an audience member to perform an action.',
 				syntax: 'CMD [id], [move]',
 				async run({ message, arg, $T }) {
-					if (!('external' in Game.instance.prototype)) throw new ChatError($T('GAME.COMMAND_NOT_ENABLED'));
 					const { game, ctx } = getGame(arg, { action: 'audience', user: message.author.id }, { room: message.target, $T });
 					if (!game.external) throw new ChatError($T('CMD_NOT_FOUND'));
 					game.external(message.author, ctx);
 				},
-			},
+			}),
 			end: {
 				name: 'end',
 				aliases: ['e'],
@@ -267,14 +269,13 @@ export const command: PSCommand[] = Object.entries(Games).map(([_gameId, Game]):
 					game.end('force');
 				},
 			},
-			substitute: {
+			...conditionalCommand(Game.meta.players === 'many', {
 				name: 'substitute',
 				aliases: ['sub', 'swap'],
 				help: 'Replaces an inactive player with an active one.',
 				perms: Symbol.for('games.manage'),
 				syntax: 'CMD #id, [user1], [user2]',
 				async run({ message, arg, $T }) {
-					if (Game.meta.players === 'single') throw new ChatError($T('GAME.COMMAND_NOT_ENABLED', { game: Game.meta.name }));
 					const { game, ctx } = getGame(arg, { action: 'sub' }, { room: message.target, $T });
 					const users = ctx.split(',').map(toId);
 					const outUser = users.find(user => Object.values(game.players).some(player => player.id === user));
@@ -287,12 +288,12 @@ export const command: PSCommand[] = Object.entries(Games).map(([_gameId, Game]):
 					if (replace.data) message.reply(replace.data);
 					game.update();
 				},
-			},
+			}),
 			forfeit: {
 				name: 'forfeit',
 				aliases: ['f', 'ff', 'leave', 'l'],
 				help: 'Forfeits a game, or leaves one in signups.',
-				syntax: 'CMD #id',
+				syntax: 'CMD [#id]',
 				async run({ message, arg, $T }) {
 					const { game } = getGame(arg, { action: 'leave', user: message.author.id }, { room: message.target, $T });
 					if (game.started) {
@@ -317,7 +318,7 @@ export const command: PSCommand[] = Object.entries(Games).map(([_gameId, Game]):
 				aliases: ['dq', 'yeet'],
 				help: 'Disqualifies a user.',
 				perms: Symbol.for('games.manage'),
-				syntax: 'CMD [game ref?], user',
+				syntax: 'CMD [game ref?], [user]',
 				async run({ message, arg, $T }) {
 					const { game, ctx } = getGame(arg, { action: 'leave' }, { room: message.target, $T });
 					const res = game.removePlayer(toId(ctx));
@@ -329,6 +330,26 @@ export const command: PSCommand[] = Object.entries(Games).map(([_gameId, Game]):
 					if (!game.started) game.signups();
 				},
 			},
+			...conditionalCommand(Game.meta.players === 'many', {
+				name: 'forcewin',
+				aliases: ['fwin', 'win'],
+				help: 'Forces the winner of a game.',
+				perms: 'driver',
+				syntax: 'CMD [#id], [user]',
+				async run({ arg, $T }) {
+					const [_gameId, _userId = ''] = arg.lazySplit(',', 1);
+					const gameId = '#' + toId(_gameId).toUpperCase();
+					const userId = toId(_userId);
+					if (!userId) throw new ChatError('You must specify the game ID for forcewin!' as ToTranslate);
+					const game = PSGames[Game.meta.id]?.[gameId];
+					if (!game) throw new ChatError($T('GAME.NOT_FOUND'));
+					const player = game.getPlayer(userId);
+					if (!player) throw new ChatError($T('GAME.IMPOSTOR_ALERT'));
+
+					// UGO-CODE
+					game.forceWin(player);
+				},
+			}),
 			rejoin: {
 				name: 'rejoin',
 				aliases: ['rj'],
@@ -383,41 +404,61 @@ export const command: PSCommand[] = Object.entries(Games).map(([_gameId, Game]):
 					message.reply(`/closehtmlpage ${message.author.id}, ${game.id}` as NoTranslate);
 				},
 			},
-			...(Game.meta.mods
-				? ({
-						mod: {
-							name: 'mod',
-							aliases: ['#'],
-							help: 'Modifies a given game.',
-							perms: Symbol.for('games.create'),
-							syntax: 'CMD [game ref], [mod]',
-							async run({ message, arg, $T }) {
-								const { game, ctx } = getGame(arg, { action: 'mod', user: message.author.id }, { room: message.target, $T });
-								if (!game.moddable?.() || !game.applyMod) throw new ChatError($T('GAME.CANNOT_MOD'));
-								const mod = parseMod(ctx, Game.meta.mods!.list, Game.meta.mods!.data);
-								if (!mod) throw new ChatError($T('GAME.MOD_NOT_FOUND', { mod: ctx }));
-								const applied = game.applyMod(mod);
-								if (applied.success) message.reply(applied.data);
-							},
-						},
-					} satisfies PSCommand['children'])
-				: {}),
-			...(Game.meta.themes
-				? ({
-						theme: {
-							name: 'theme',
-							aliases: ['t'],
-							help: "Customizes a game's theme.",
-							perms: Symbol.for('games.create'),
-							syntax: 'CMD [game ref], [theme name]',
-							async run({ message, arg, $T }) {
-								const { game, ctx } = getGame(arg, { action: 'any' }, { room: message.target, $T });
-								const result = game.setTheme(ctx);
-								message.reply(result);
-							},
-						},
-					} satisfies PSCommand['children'])
-				: {}),
+			...conditionalCommand(
+				Game.meta.mods,
+				{
+					name: 'mod',
+					aliases: ['#'],
+					help: 'Modifies a given game.',
+					perms: Symbol.for('games.create'),
+					syntax: 'CMD [game ref], [mod]',
+					async run({ message, arg, $T }) {
+						const { game, ctx } = getGame(arg, { action: 'mod', user: message.author.id }, { room: message.target, $T });
+						if (!game.moddable?.() || !game.applyMod) throw new ChatError($T('GAME.CANNOT_MOD'));
+						const mod = parseMod(ctx, Game.meta.mods!.list, Game.meta.mods!.data);
+						if (!mod) throw new ChatError($T('GAME.MOD_NOT_FOUND', { mod: ctx }));
+						const applied = game.applyMod(mod);
+						if (applied.success) message.reply(applied.data);
+					},
+				},
+				{
+					name: 'mods',
+					aliases: ['modslist', 'listmods', 'modoptions'],
+					help: `Lists the mods available for ${Game.meta.name}.`,
+					syntax: 'CMD',
+					async run({ broadcastHTML }) {
+						const mods = Game.meta.mods!;
+						broadcastHTML(
+							<div>
+								{Object.values(mods.data)
+									.filter((mod): mod is BaseModEntry => !!mod)
+									.map(mod => (
+										<details>
+											<summary>
+												<b>{mod.name}</b>
+												{mod.aliases?.length ? ` (${mod.aliases.join('/')})` : null}
+											</summary>
+											{mod.desc}
+										</details>
+									))
+									.space(<br />)}
+							</div>
+						);
+					},
+				}
+			),
+			...conditionalCommand(Game.meta.themes, {
+				name: 'theme',
+				aliases: ['t'],
+				help: "Customizes a game's theme.",
+				perms: Symbol.for('games.create'),
+				syntax: 'CMD [game ref], [theme name]',
+				async run({ message, arg, $T }) {
+					const { game, ctx } = getGame(arg, { action: 'any' }, { room: message.target, $T });
+					const result = game.setTheme(ctx);
+					message.reply(result);
+				},
+			}),
 			menu: {
 				name: 'menu',
 				aliases: ['m', 'list'],
@@ -432,62 +473,71 @@ export const command: PSCommand[] = Object.entries(Games).map(([_gameId, Game]):
 					message.target.sendHTML(staffHTML, { ...opts, rank: '%' });
 				},
 			},
-			stash: {
-				name: 'stash',
-				aliases: ['yeet'],
-				help: 'Stashes a game to store it for later.',
-				perms: Symbol.for('games.create'),
-				syntax: 'CMD [game ref]',
-				async run({ message, arg, $T }) {
-					const { game } = getGame(arg, { action: 'any' }, { room: message.target, $T });
-					delete PSGames[gameId]?.[game.id];
-					game.pokeTimer?.cancel();
-					game.timer?.cancel();
-					message.reply($T('GAME.STASHED', { id: game.id }));
+			...conditionalCommand(
+				Game.meta.players === 'many',
+				{
+					name: 'closepage',
+					help: 'Closes a page without leaving the game.',
+					syntax: 'CMD [game ref]',
+					async run({ message, arg, $T }) {
+						const { game } = getGame(arg, { action: 'leave', user: message.author.id }, { room: message.target, $T });
+						if (!game.getPlayer(message.author)) throw new ChatError($T('GAME.INVALID_INPUT'));
+						message.reply(`/closehtmlpage ${message.author.id}, ${game.id}` as NoTranslate);
+					},
 				},
-			},
-			...(Game.meta.players === 'many'
-				? {
-						backups: {
-							name: 'backups',
-							aliases: ['bu', 'b'],
-							help: 'Shows a list of currently available backups.',
-							perms: Symbol.for('games.create'),
-							syntax: 'CMD',
-							async run({ message }) {
-								const HTML = renderBackups(message.target, Game.meta);
-								message.sendHTML(HTML, { name: `${gameId}-backups` });
-							},
-						},
-						restore: {
-							name: 'restore',
-							aliases: ['r', 'unstash', 'unyeet'],
-							help: 'Restores a game from stash/backups.',
-							perms: Symbol.for('games.create'),
-							syntax: 'CMD [id]',
-							async run({ message, arg, $T }) {
-								const id = arg.trim().toUpperCase();
-								if (!/^#\w+$/.test(id)) throw new ChatError($T('GAME.INVALID_INPUT'));
-								if (PSGames[gameId]?.[id]) throw new ChatError($T('GAME.IN_PROGRESS'));
-								const lookup = gameCache.get(id);
-								if (lookup.room !== message.target.roomid) throw new ChatError($T('WRONG_ROOM'));
-								if (lookup.game !== gameId) throw new ChatError($T('GAME.RESTORING_WRONG_TYPE'));
-								const game = new Game.instance({
-									id: lookup.id,
-									meta: Game.meta,
-									room: message.target,
-									$T,
-									by: message.author,
-									backup: lookup.backup,
-									args: [],
-								});
-								message.reply($T('GAME.RESTORED', { id: game.id }));
-								if (game.started) game.update();
-								else game.signups();
-							},
-						},
-					}
-				: {}),
+				{
+					name: 'stash',
+					aliases: ['yeet'],
+					help: 'Stashes a game to store it for later.',
+					perms: Symbol.for('games.create'),
+					syntax: 'CMD [game ref]',
+					async run({ message, arg, $T }) {
+						const { game } = getGame(arg, { action: 'any' }, { room: message.target, $T });
+						delete PSGames[gameId]?.[game.id];
+						game.pokeTimer?.cancel();
+						game.timer?.cancel();
+						message.reply($T('GAME.STASHED', { id: game.id }));
+					},
+				},
+				{
+					name: 'backups',
+					aliases: ['bu', 'b'],
+					help: 'Shows a list of currently available backups.',
+					perms: Symbol.for('games.create'),
+					syntax: 'CMD',
+					async run({ message }) {
+						const HTML = renderBackups(message.target, Game.meta.id);
+						message.sendHTML(HTML, { name: `${gameId}-backups` });
+					},
+				},
+				{
+					name: 'restore',
+					aliases: ['r', 'unstash', 'unyeet'],
+					help: 'Restores a game from stash/backups.',
+					perms: Symbol.for('games.create'),
+					syntax: 'CMD [id]',
+					async run({ message, arg, $T }) {
+						const id = arg.trim().toUpperCase();
+						if (!/^#\w+$/.test(id)) throw new ChatError($T('GAME.INVALID_INPUT'));
+						if (PSGames[gameId]?.[id]) throw new ChatError($T('GAME.IN_PROGRESS'));
+						const lookup = gameCache.get(id);
+						if (lookup.room !== message.target.roomid) throw new ChatError($T('WRONG_ROOM'));
+						if (lookup.game !== gameId) throw new ChatError($T('GAME.RESTORING_WRONG_TYPE'));
+						const game = new Game.instance({
+							id: lookup.id,
+							meta: Game.meta,
+							room: message.target,
+							$T,
+							by: message.author,
+							backup: lookup.backup,
+							args: [],
+						});
+						message.reply($T('GAME.RESTORED', { id: game.id }));
+						if (game.started) game.update();
+						else game.signups();
+					},
+				}
+			),
 		},
 	};
 });

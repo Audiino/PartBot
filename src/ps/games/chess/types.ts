@@ -20,6 +20,7 @@ export type RenderCtx = {
 	id: string;
 	side: Turn | null;
 	turn: Turn;
+	lastMove: Move | null;
 	board: ReturnType<Chess['board']>;
 	selected?: Square | null;
 	isActive: boolean;
@@ -28,7 +29,6 @@ export type RenderCtx = {
 	dimHeader?: boolean;
 	promotion?: boolean;
 	theme: ThemeColours;
-	small?: boolean;
 };
 
 export type WinCtx = ({ type: 'win' } & Record<'winner' | 'loser', { name: string; id: string; turn: string }>) | { type: 'draw' };

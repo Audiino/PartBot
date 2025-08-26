@@ -1,5 +1,10 @@
+import { HSL } from 'ps-client/tools';
+
 import { BaseGame } from '@/ps/games/game';
+import { TOKEN_COLORS } from '@/ps/games/snakesladders/constants';
 import { render } from '@/ps/games/snakesladders/render';
+import { HslToHex } from '@/utils/color';
+import { colorSampler } from '@/utils/colorSampler';
 import { sample } from '@/utils/random';
 import { range } from '@/utils/range';
 
@@ -8,6 +13,7 @@ import type { BaseContext } from '@/ps/games/game';
 import type { Log } from '@/ps/games/snakesladders/logs';
 import type { RenderCtx, State, WinCtx } from '@/ps/games/snakesladders/types';
 import type { ActionResponse, EndType } from '@/ps/games/types';
+import type { Hex } from '@/utils/color';
 import type { User } from 'ps-client';
 import type { ReactNode } from 'react';
 
@@ -15,7 +21,7 @@ export { meta } from '@/ps/games/snakesladders/meta';
 
 export class SnakesLadders extends BaseGame<State> {
 	log: Log[] = [];
-	winCtx?: WinCtx | { type: EndType };
+	declare winCtx?: WinCtx | { type: EndType };
 	frames: ReactNode[] = [];
 
 	ladders: [number, number][] = [
@@ -48,9 +54,15 @@ export class SnakesLadders extends BaseGame<State> {
 	}
 
 	onStart(): ActionResponse {
-		const colors = ['#ff0000', '#ff8000', '#ffff00', '#00ff00', '#00ffff', '#0000ff', '#9e00ff', '#ff00ff'].shuffle();
+		const playerColors = Object.values(this.players).map<{ id: string; color: Hex }>(player => {
+			const [H, S, L] = HSL(player.id).hsl;
+			return { id: player.turn, color: HslToHex({ H, S, L, colorspace: 'hsla' }) };
+		});
+
+		const playerColorMappings = Object.fromEntries(colorSampler(playerColors, TOKEN_COLORS).map(({ id, assigned }) => [id, assigned]));
+
 		Object.values(this.players).forEach(
-			player => (this.state.board[player.id] = { pos: 0, name: player.name, color: colors.shift()! })
+			player => (this.state.board[player.id] = { pos: 0, name: player.name, color: playerColorMappings[player.turn] })
 		);
 		return { success: true, data: null };
 	}
@@ -79,7 +91,7 @@ export class SnakesLadders extends BaseGame<State> {
 				player,
 				`You rolled a ${dice}, but needed a ${100 - current}${100 - current === 1 ? '' : ' or lower'}...` as ToTranslate
 			);
-			this.nextPlayer();
+			this.endTurn();
 			return;
 		}
 
@@ -100,14 +112,13 @@ export class SnakesLadders extends BaseGame<State> {
 		this.log.push({ turn: player, time: new Date(), action: 'roll', ctx: dice });
 
 		if (final === 100) {
-			this.winCtx = { type: 'win', winner: { ...this.players[current], board: this.state.board } };
-			this.end();
-			return;
+			this.winCtx = { type: 'win', winner: { ...this.players[player], board: this.state.board } };
+			return this.end();
 		}
 
 		this.frames = frameNums.map(pos => this.render(null, pos));
 
-		this.nextPlayer();
+		this.endTurn();
 	}
 
 	update(user?: string): void {
