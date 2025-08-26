@@ -15,4 +15,7 @@ export const meta: Meta = {
 	autostart: false,
 	pokeTimer: fromHumanTime('30 sec'),
 	timer: fromHumanTime('1 min'),
+
+	// UGO-CODE
+	ugo: null
 };

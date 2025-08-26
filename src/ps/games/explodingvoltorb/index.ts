@@ -10,7 +10,7 @@ import { type BaseContext, BaseGame } from '@/ps/games/game';
 
 import type { TranslatedText } from '@/i18n/types';
 import type { Log } from '@/ps/games/explodingvoltorb/logs';
-import type { RenderCtx, State, WinCtx } from '@/ps/games/explodingvoltorb/types';
+import type { RenderCtx, State } from '@/ps/games/explodingvoltorb/types';
 import type { ActionResponse, EndType } from '@/ps/games/types';
 import type { User } from 'ps-client';
 
@@ -19,7 +19,6 @@ export { meta } from '@/ps/games/explodingvoltorb/meta';
 export class ExplodingVoltorb extends BaseGame<State> {
 	log: Log[] = [];	
 	turnCount: number | null = null;
-	winCtx?: WinCtx | { type: EndType };
 	text: string[] = [];	
 
 	constructor(ctx: BaseContext) {
@@ -146,14 +145,13 @@ export class ExplodingVoltorb extends BaseGame<State> {
 
 		if (getsEliminated) {
 			this.discardPlayerHand(turn);
-			this.removePlayer(turn);
-			this.nextPlayer();
+			this.removePlayer(turn);			
 			this.state.phase = GamePhase.WaitingForAction;
 			this.update();
 		}
 		if (this.gameOver()) return this.end();		     
 		
-		if (!drewVoltorb) this.nextPlayer();
+		if (!drewVoltorb) this.endTurn();
 	}
 
 	replaceVoltorb(value: string): void {
@@ -201,7 +199,7 @@ export class ExplodingVoltorb extends BaseGame<State> {
 		this.log.push(logEntry);
 		this.room.sendHTML(...renderMove(logEntry, this));
 		
-		this.nextPlayer();
+		this.endTurn();
 	}
 	
 	discardPlayerHand(side: string): void {
