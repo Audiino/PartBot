@@ -2,7 +2,7 @@ import {
 	CardCountsLarge,
 	CardCountsMedium, 
 	CardCountsSmall,     
-	CardType
+	CardType,	
 } from '@/ps/games/explodingvoltorb/constants';
 import { render, renderMove } from '@/ps/games/explodingvoltorb/render';
 import { AllowedActions, GamePhase } from '@/ps/games/explodingvoltorb/types';
@@ -40,6 +40,50 @@ export class ExplodingVoltorb extends BaseGame<State> {
 			case 's': {
 				if (!value) this.throw();
 				this.selectCard(value);
+
+				const selectedCardAmount = this.getSelectedCardAmount(this.turn!);
+				const selectedCardNames = this.getSelectedCardNames(this.turn!);
+				const identical = this.areCardsIdentical(selectedCardNames);
+				const unique = this.areCardsUnique(selectedCardNames);
+
+				switch (selectedCardAmount) {			
+					case 1: {
+						// almost always valid
+						// invalid if you're clicking reactive cards
+						// reactive = defuse, nope
+					}
+					case 2: {
+						if (identical) {
+							// valid
+						}
+						else {
+							// invalid
+						}
+					}
+					case 3: {
+						if (identical) {
+							// valid
+						}
+						else {
+							// invalid
+						}
+					}
+					case 4: {
+						// this.throw('GAME.EXPLODING_VOLTORB.INVALID_CARD_SELECTION');
+					}
+					case 5: {
+						if (unique) {
+							// valid
+						}
+						else {
+							// invalid
+						}
+					}
+					default:
+						// you can't have nothing selected
+						// since you got through the first switch
+						// you have 6 or more selected, always invalid						
+				}
 				break;
 			}
 			// Nope: play a nope card
@@ -93,6 +137,26 @@ export class ExplodingVoltorb extends BaseGame<State> {
 		if (!hand || !selected || hand.length !== selected.length) return [];
 
 		return hand.filter((_, i) => selected[i]);
+	}
+
+	getSelectedCardAmount(side: string): number {
+		const hand = this.state.hand[side];
+		const selected = this.state.selectedCards;
+		if (!hand || !selected || hand.length !== selected.length) return 0;
+
+		return selected.filter(isSelected => isSelected).length;
+	}
+
+	areCardsIdentical(selectedCardNames: CardType[]): boolean {
+		if (selectedCardNames.length === 0) return false;
+		return selectedCardNames.every(card => card === selectedCardNames[0]);
+	}
+
+	areCardsUnique(selectedCardNames: CardType[]): boolean{
+		const uniqueCardNames = new Set(selectedCardNames);
+
+		if (selectedCardNames.length === uniqueCardNames.size) return true;
+		else return false;
 	}
 
 	drawTopCard(): void {        		
@@ -288,8 +352,8 @@ export class ExplodingVoltorb extends BaseGame<State> {
 			selection: {
 				cards: this.state.selectedCards,
 				cardNames: side ? this.getSelectedCardNames(side) : [],
-				cardAmount: this.state.selectedCards.filter(isSelected => isSelected).length,
-				hasAny: this.state.selectedCards.some(isSelected => isSelected),
+				cardAmount: side ? this.getSelectedCardAmount(side) : 0,
+				hasAny: this.state.selectedCards.some(isSelected => isSelected),				
 			},			
 			isActive,
 			side,

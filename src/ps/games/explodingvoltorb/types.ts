@@ -17,7 +17,7 @@ export type RenderCtx = {
 	players: Record<string, { name: string; hand: number; out?: boolean | undefined }>;
 	board: { drawPileAmount: number; discardPileAmount: number; discardPileLastPlayedAmount: Record<CardType, number> };
 	hand: CardType[] | undefined;
-	selection: { cards: boolean[]; cardNames: CardType[]; cardAmount: number; hasAny: boolean; }	
+	selection: { cards: boolean[]; cardNames: CardType[]; cardAmount: number; hasAny: boolean; }
 	isActive: boolean;
 	side: string | null;
 	turn: string;	

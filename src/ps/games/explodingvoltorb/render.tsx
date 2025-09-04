@@ -126,12 +126,16 @@ function PlayerHand(
 }
 
 function CardSelection({ isActive, selection }: { isActive: boolean; selection: { cardNames: CardType[]; cardAmount: number; hasAny: boolean; } }): ReactElement | null {
-	if (!isActive) return null;
-	if (selection.hasAny) return (
+	if (!isActive) return null;	
+
+	if (selection.hasAny) {		
+		return (
 		<UserPanel>
 			<div>You have selected {pluralize(selection.cardAmount, 'card', 'cards')}: {selection.cardNames.join(", ")}</div>
+			<div>The effect of this is </div>
 		</UserPanel>
-	)
+		)
+	}
 	else return (
 		null
 	)	
