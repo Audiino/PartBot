@@ -34,7 +34,7 @@ import type { ReactElement } from 'react';
 export function renderScrabbleDexLeaderboard(entries: ScrabbleDexEntry[], $T: TranslationFn): ReactElement {
 	const usersData = Object.values(entries.groupBy(entry => entry.by) as Record<string, ScrabbleDexEntry[]>).map(entries => {
 		const name = entries.findLast(entry => entry.byName)?.byName ?? entries[0].by;
-		const uniqueMons = entries.map(entry => entry.pokemon).unique();
+		const uniqueMons = entries.map(entry => entry.pokemonName).unique();
 		const count = uniqueMons.length;
 		const points = uniqueMons.map(mon => Math.max(1, mon.length - 4)).sum();
 		return { name, count, points };
@@ -241,7 +241,7 @@ export const command: PSCommand[] = [
 			const allEntries = await getScrabbleDex();
 			const results = allEntries!.filter(entry => entry.by === target);
 			const grouped = mapValues(
-				results.map(res => res.pokemon.toUpperCase()).groupBy(mon => mon.length),
+				results.map(res => res.pokemonName.toUpperCase()).groupBy(mon => toId(mon).length),
 				mons => mons?.unique().sort()
 			);
 			const count = Object.values(grouped)

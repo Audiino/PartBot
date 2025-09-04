@@ -11,7 +11,7 @@ import { toId } from '@/utils/toId';
 
 import type { Log as ScrabbleLog } from '@/ps/games/scrabble/logs';
 import type { WinCtx as ScrabbleWinCtx } from '@/ps/games/scrabble/types';
-import type { Player } from '@/ps/games/types';
+import type { BaseLog, Player } from '@/ps/games/types';
 
 const schema = new mongoose.Schema<GameModel>({
 	id: {
@@ -80,9 +80,17 @@ export interface GameModel {
 }
 const model = mongoose.model('game', schema, 'games', { overwriteModels: true });
 
+export type NormalizedGame = Omit<GameModel, 'players' | 'log'> & { players: Record<string, Player>; log: BaseLog[] };
+
 export async function uploadGame(game: GameModel): Promise<GameModel | null> {
 	if (!IS_ENABLED.DB) return null;
 	return model.create(game);
+}
+
+// Hydrate logStrings into log objects
+export function normalizeGame(game: HydratedDocument<GameModel>): NormalizedGame {
+	const serializable = 'toJSON' in game ? game.toJSON()! : game;
+	return { ...serializable, log: serializable.log.map(entry => JSON.parse(entry)) };
 }
 
 export async function getGameById(gameType: string, gameId: string): Promise<HydratedDocument<GameModel> | null> {
@@ -145,7 +153,8 @@ export async function getScrabbleDex(): Promise<ScrabbleDexEntry[] | null> {
 					const words = Object.keys(log.ctx.words).map(toId).unique();
 					return words.filterMap<ScrabbleDexEntry>(word => {
 						if (!(word in pokedex)) return;
-						const mon = pokedex[word];
+						let mon = pokedex[word];
+						if (mon.baseSpecies) mon = pokedex[toId(mon.baseSpecies)];
 						if (mon.num <= 0) return;
 						return {
 							...baseCtx,
