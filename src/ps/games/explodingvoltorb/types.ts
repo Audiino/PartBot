@@ -1,11 +1,15 @@
-import type { CardType } from '@/ps/games/explodingvoltorb/constants'
+import type { CardType, ComboType } from '@/ps/games/explodingvoltorb/constants'
 
 export type State = {
 	turn: string;
 	hand: Record<string, CardType[]>;
 	selectedCards: boolean[];
 	baseCards: CardType[];
-	board: { drawPile: CardType[]; discardPile: CardType[]; discardPileLastPlayed: CardType[] };        
+	board: { 
+		drawPile: CardType[];
+		discardPile: CardType[];
+		discardPileLastPlayed: CardType[];
+	};        
 	phase: GamePhase;
 	phaseData: PhaseData;
 };
@@ -15,9 +19,19 @@ export type RenderCtx = {
 	header?: string;
 	dimHeader?: boolean;
 	players: Record<string, { name: string; hand: number; out?: boolean | undefined }>;
-	board: { drawPileAmount: number; discardPileAmount: number; discardPileLastPlayedAmount: Record<CardType, number> };
+	board: {
+		drawPileAmount: number;
+		discardPileAmount: number;
+		discardPileLastPlayedAmount: Record<CardType, number>;
+	};
 	hand: CardType[] | undefined;
-	selection: { cards: boolean[]; cardNames: CardType[]; cardAmount: number; hasAny: boolean; }
+	selection: {
+		cards: boolean[];
+		cardNames: CardType[];
+		cardAmount: number;
+		hasAny: boolean;
+		result: string;
+	};
 	isActive: boolean;
 	side: string | null;
 	turn: string;	

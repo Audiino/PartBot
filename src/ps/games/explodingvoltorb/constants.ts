@@ -40,11 +40,18 @@ export const CardDescription: Record<CardType, string> = {
 	[CardType.FERAL_CAT]: 'The Feral Cat is powerless on its own, but can be used as any cat card in Special Combos.',
 }
 
-export enum ComboEffects {
-	TWO_OF_A_KIND = 'Play any two identical cards to steal a random card from any player.',
-	THREE_OF_A_KIND = "Play any three identical cards to name a card you want from any player. If they have it, you take the card. If they don't have it, you get nothing.",
-	FIVE_DIFFERENT_KINDS = 'Play any five different cards to take one card from the discard pile.',
-	INVALID_CARD_SELECTION = 'This selection of cards is invalid and does not do anything.',
+export enum ComboType {
+	TWO_OF_A_KIND = 'Two of a kind',
+	THREE_OF_A_KIND = 'Three of a kind',
+	FIVE_UNIQUE = 'Five unique cards',
+	INVALID_CARD_SELECTION = 'Invalid card selection',
+}
+
+export const ComboDescription: Record<ComboType, string> = {
+	[ComboType.TWO_OF_A_KIND]: 'Play any two identical cards to steal a random card from any player.',
+	[ComboType.THREE_OF_A_KIND]: "Play any three identical cards to name a card you want from any player. If they have it, you take the card. If they don't have it, you get nothing.",
+	[ComboType.FIVE_UNIQUE]: 'Play any five different cards to take one card from the discard pile.',
+	[ComboType.INVALID_CARD_SELECTION]: 'Your current card selection is invalid and does not do anything.',
 }
 
 // total 41

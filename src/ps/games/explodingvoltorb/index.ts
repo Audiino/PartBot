@@ -1,8 +1,11 @@
 import {     
 	CardCountsLarge,
-	CardCountsMedium, 
-	CardCountsSmall,     
-	CardType,	
+	CardCountsMedium,
+	CardCountsSmall,
+	CardType,
+	ComboType,
+	CardDescription,
+	ComboDescription,
 } from '@/ps/games/explodingvoltorb/constants';
 import { render, renderMove } from '@/ps/games/explodingvoltorb/render';
 import { AllowedActions, GamePhase } from '@/ps/games/explodingvoltorb/types';
@@ -46,44 +49,8 @@ export class ExplodingVoltorb extends BaseGame<State> {
 				const identical = this.areCardsIdentical(selectedCardNames);
 				const unique = this.areCardsUnique(selectedCardNames);
 
-				switch (selectedCardAmount) {			
-					case 1: {
-						// almost always valid
-						// invalid if you're clicking reactive cards
-						// reactive = defuse, nope
-					}
-					case 2: {
-						if (identical) {
-							// valid
-						}
-						else {
-							// invalid
-						}
-					}
-					case 3: {
-						if (identical) {
-							// valid
-						}
-						else {
-							// invalid
-						}
-					}
-					case 4: {
-						// this.throw('GAME.EXPLODING_VOLTORB.INVALID_CARD_SELECTION');
-					}
-					case 5: {
-						if (unique) {
-							// valid
-						}
-						else {
-							// invalid
-						}
-					}
-					default:
-						// you can't have nothing selected
-						// since you got through the first switch
-						// you have 6 or more selected, always invalid						
-				}
+				this.getCardSelectionResult( selectedCardAmount, selectedCardNames, identical, unique );
+				
 				break;
 			}
 			// Nope: play a nope card
@@ -157,6 +124,53 @@ export class ExplodingVoltorb extends BaseGame<State> {
 
 		if (selectedCardNames.length === uniqueCardNames.size) return true;
 		else return false;
+	}
+
+	getCardSelectionResult(
+		selectedCardAmount: number,
+		selectedCardNames: CardType[],
+		identical: boolean,
+		unique: boolean
+	): string {
+		switch (selectedCardAmount) {
+			case 1: {
+				const card = selectedCardNames[0];
+
+				if (card === CardType.DEFUSE || card === CardType.NOPE) {
+        			return ComboDescription[ComboType.INVALID_CARD_SELECTION];
+      			}
+				else return CardDescription[card];
+			}
+			case 2: {
+				if (identical) {
+					return ComboDescription[ComboType.TWO_OF_A_KIND];
+				}
+				else {
+					return ComboDescription[ComboType.INVALID_CARD_SELECTION];
+				}
+			}
+			case 3: {
+				if (identical) {
+					return ComboDescription[ComboType.THREE_OF_A_KIND];
+				}
+				else {
+					return ComboDescription[ComboType.INVALID_CARD_SELECTION];
+				}
+			}
+			case 4: {
+				return ComboDescription[ComboType.INVALID_CARD_SELECTION];
+			}
+			case 5: {
+				if (unique) {
+					return ComboDescription[ComboType.FIVE_UNIQUE];
+				}
+				else {
+					return ComboDescription[ComboType.INVALID_CARD_SELECTION];
+				}
+			}
+			default:				
+				return ComboDescription[ComboType.INVALID_CARD_SELECTION];
+		}		
 	}
 
 	drawTopCard(): void {        		
@@ -325,6 +339,11 @@ export class ExplodingVoltorb extends BaseGame<State> {
 		const isActive = !!side && side === this.turn;
 		const hand = side ? this.state.hand[side] : undefined;
 
+		const selectedCardAmount = this.getSelectedCardAmount(this.turn!);
+		const selectedCardNames = this.getSelectedCardNames(this.turn!);
+		const identical = this.areCardsIdentical(selectedCardNames);
+		const unique = this.areCardsUnique(selectedCardNames);
+
 		const ctx: RenderCtx = {
 			id: this.id,												
 			players: Object.fromEntries(
@@ -347,14 +366,15 @@ export class ExplodingVoltorb extends BaseGame<State> {
 					cardCount[card] = (cardCount[card] || 0) + 1;
 					return cardCount;
 				}, {} as Record<CardType, number>),
-			},                     
+			},
 			hand,
 			selection: {
 				cards: this.state.selectedCards,
 				cardNames: side ? this.getSelectedCardNames(side) : [],
 				cardAmount: side ? this.getSelectedCardAmount(side) : 0,
-				hasAny: this.state.selectedCards.some(isSelected => isSelected),				
-			},			
+				hasAny: this.state.selectedCards.some(isSelected => isSelected),
+				result: this.getCardSelectionResult( selectedCardAmount, selectedCardNames, identical, unique ),
+			},
 			isActive,
 			side,
 			turn: this.turn!,	

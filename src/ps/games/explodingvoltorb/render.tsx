@@ -7,7 +7,6 @@ import type { ExplodingVoltorb } from '@/ps/games/explodingvoltorb';
 import type { Log } from '@/ps/games/explodingvoltorb/logs';
 import type { GamePhase, RenderCtx } from '@/ps/games/explodingvoltorb/types';
 import type { ReactElement, ReactNode } from 'react';
-import React from 'react';
 
 type This = { msg: string };
 
@@ -125,14 +124,15 @@ function PlayerHand(
 		)
 }
 
-function CardSelection({ isActive, selection }: { isActive: boolean; selection: { cardNames: CardType[]; cardAmount: number; hasAny: boolean; } }): ReactElement | null {
-	if (!isActive) return null;	
+function CardSelection({ isActive, phase, selection }: { isActive: boolean; phase: GamePhase; selection: { cardNames: CardType[]; cardAmount: number; hasAny: boolean; result: string; } }): ReactElement | null {
+	if (!isActive) return null;
+	if (phase === 'Voltorb reaction') return null;
 
 	if (selection.hasAny) {		
 		return (
 		<UserPanel>
 			<div>You have selected {pluralize(selection.cardAmount, 'card', 'cards')}: {selection.cardNames.join(", ")}</div>
-			<div>The effect of this is </div>
+			<div>{selection.result}</div>
 		</UserPanel>
 		)
 	}
@@ -193,14 +193,11 @@ export function render(this: This, ctx: RenderCtx): ReactElement {
 			</UserPanel>
 			
 			{ctx.side ? (
-				// TODO: The effect of CardSelection is: (CardDescription)
-				// Invalid play
-				// confirm (or doesn't exist if invalid)
 				<>
 				<VoltorbReaction isActive={ctx.isActive} phase={ctx.phase} hand={ctx.hand} msg={this.msg}/>
-				<CardSelection isActive={ctx.isActive} selection={ctx.selection}/>		
+				<CardSelection isActive={ctx.isActive} phase={ctx.phase} selection={ctx.selection}/>
 				<PlayerHand isActive={ctx.isActive} hand={ctx.hand} selection={ctx.selection} msg={this.msg}/>
-				<EndTurnAndDraw isActive={ctx.isActive} phase={ctx.phase} msg={this.msg}/>			
+				<EndTurnAndDraw isActive={ctx.isActive} phase={ctx.phase} msg={this.msg}/>
 				</>
 			) : null}		
 		</center>
