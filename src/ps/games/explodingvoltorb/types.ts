@@ -1,4 +1,4 @@
-import type { CardType, ComboType } from '@/ps/games/explodingvoltorb/constants'
+import type { CardType } from '@/ps/games/explodingvoltorb/constants'
 
 export type State = {
 	turn: string;

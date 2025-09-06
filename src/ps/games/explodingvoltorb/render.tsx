@@ -1,3 +1,4 @@
+import { LogEntry } from '@/ps/games/render';
 import { Button, Form, Username } from '@/utils/components/ps';
 import { Logger } from '@/utils/logger';
 import { pluralize } from '@/utils/pluralize';
@@ -10,60 +11,49 @@ import type { ReactElement, ReactNode } from 'react';
 
 type This = { msg: string };
 
-export function renderMove(logEntry: Log, { id, players, renderCtx: { msg } }: ExplodingVoltorb): [ReactElement, { name: string }] {
-	const Wrapper = ({ children }: { children: ReactNode }): ReactElement => (
-		<>
-			<hr />
-			{children}
-			<Button name="send" value={`${msg} watch`} style={{ float: 'right' }}>
-				Watch!
-			</Button>
-			<hr />
-		</>
-	);
-
-	const playerName = players[logEntry.turn]?.name;
-	const opts = { name: `${id}-chatlog` };
+export function renderMove(logEntry: Log, game: ExplodingVoltorb): [ReactElement, { name: string }] {	
+	const playerName = game.players[logEntry.turn]?.name;
+	const opts = { name: `${game.id}-chatlog` };
 
 	switch (logEntry.action) {
 		case 'draw':
 			const getsEliminated = logEntry.ctx.getsEliminated;
 			return [
-				<Wrapper>				
+				<LogEntry game={game}>
 					<Username name={playerName} /> drew a
 					{getsEliminated ? (' Voltorb and blew up!') : (' card.')}
-				</Wrapper>,
+				</LogEntry>,
 				opts,
 			];
 		case 'replace':
 			return [
-				<Wrapper>
+				<LogEntry game={game}>
 					<Username name={playerName} /> replaced the Voltorb.
-				</Wrapper>,
+				</LogEntry>,
 				opts,
 			];	
 		case 'nope':
 			return [
 				// TODO: well first i have to write the card logic, then noping comes next
-				<Wrapper>
+				<LogEntry game={game}>
 					nope: you should not be seeing this yet D: 
-				</Wrapper>,
+				</LogEntry>,
 				opts,
 			];	
 		case 'play':			
 			return [
 				// TODO: playing card logic
-				<Wrapper>
-					play: you should not be seeing this yet D: 
-				</Wrapper>,
+				<LogEntry game={game}>
+					nope: you should not be seeing this yet D: 
+				</LogEntry>,
 				opts,
 			];				
 		default:
-			Logger.log('EV had some weird move', logEntry, players);
+			Logger.log('EV had some weird move', logEntry, game.players);
 			return [
-				<Wrapper>
+				<LogEntry game={game}>
 					Well <i>something</i> happened, I think! Someone go poke PartMan
-				</Wrapper>,
+				</LogEntry>,
 				opts,
 			];
 	}

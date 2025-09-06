@@ -2,10 +2,10 @@ import {
 	CardCountsLarge,
 	CardCountsMedium,
 	CardCountsSmall,
-	CardType,
-	ComboType,
 	CardDescription,
+	CardType,
 	ComboDescription,
+	ComboType,
 } from '@/ps/games/explodingvoltorb/constants';
 import { render, renderMove } from '@/ps/games/explodingvoltorb/render';
 import { AllowedActions, GamePhase } from '@/ps/games/explodingvoltorb/types';
