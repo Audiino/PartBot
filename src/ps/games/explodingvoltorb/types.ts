@@ -26,6 +26,7 @@ export type RenderCtx = {
 	};
 	hand: CardType[] | undefined;
 	selection: {
+		clickable: boolean;
 		cards: boolean[];
 		cardNames: CardType[];
 		cardAmount: number;

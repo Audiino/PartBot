@@ -115,8 +115,10 @@ export class ExplodingVoltorb extends BaseGame<State> {
 	}
 
 	areCardsIdentical(selectedCardNames: CardType[]): boolean {
+		// TODO: i forgot about the feral cat case lol
+
 		if (selectedCardNames.length === 0) return false;
-		return selectedCardNames.every(card => card === selectedCardNames[0]);
+		return selectedCardNames.every(card => card === selectedCardNames[0]);		
 	}
 
 	areCardsUnique(selectedCardNames: CardType[]): boolean{
@@ -369,6 +371,7 @@ export class ExplodingVoltorb extends BaseGame<State> {
 			},
 			hand,
 			selection: {
+				clickable: isActive && (this.state.phase !== 'Voltorb reaction'),
 				cards: this.state.selectedCards,
 				cardNames: side ? this.getSelectedCardNames(side) : [],
 				cardAmount: side ? this.getSelectedCardAmount(side) : 0,

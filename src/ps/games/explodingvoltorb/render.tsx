@@ -28,7 +28,7 @@ export function renderMove(logEntry: Log, game: ExplodingVoltorb): [ReactElement
 		case 'replace':
 			return [
 				<LogEntry game={game}>
-					<Username name={playerName} /> replaced the Voltorb.
+					<Username name={playerName} /> used their Defuse and replaced the Voltorb.
 				</LogEntry>,
 				opts,
 			];	
@@ -72,46 +72,56 @@ function PlayerHandAmount({ players }: { players: RenderCtx['players'] }): React
 		const username = <Username name={player.name} />;
 		return (
 			<div>
-				{player.out ? <s>{username}</s> : username}: {player.hand}				
+				{player.out ? <s>{username}</s> : username}: {player.hand}
 			</div>
 		);
 	});
 }
 
 function PlayerHand(
-	{ isActive, hand, selection, msg }: 
-	{ isActive: boolean; hand: CardType[] | undefined; selection: { cards: boolean[] }; msg: string; }):
+	{ hand, selection, msg }: 
+	{ hand: CardType[] | undefined; selection: { clickable: boolean; cards: boolean[] }; msg: string; }):
 	ReactElement | null {
 		if (!hand) return null;
 
 		return (
 			<UserPanel>
-				<div>
-					{hand?.map((card, i) => (
-						<div key={i} style={{ margin: '2px 0' }}>
-							<details>
-								<summary style={{ cursor: 'pointer' }}>
-									{isActive ? (
-										<>
-										{selection.cards[i] ? (
-												<Button value={`${msg} ! s ${i}`}><b>{card}</b></Button>
-										) : (
-												<Button value={`${msg} ! s ${i}`}>{card}</Button>
-										)}
-										</>
-									) : (
-										<>{card}</>
-									)}
-								</summary>
-								<div style={{ border: '1px solid', borderRadius: 4, padding: '4px 8px', marginTop: 4 }}>
-									{CardDescription[card]}<br></br>
-								</div>
-							</details>
-						</div>
-					))}
-				</div>
+				<>
+				{hand?.map((card, index) => (
+					<div key={index} style={{ margin: '2px 0' }}>
+						<ShowCard card={card} selection={selection} index={index} msg={msg}></ShowCard>
+					</div>
+				))}
+				</>
 			</UserPanel>
 		)
+}
+
+function ShowCard(
+	{ card, selection, index, msg }: 
+	{ card: CardType; selection: { clickable: boolean; cards: boolean[] }; index: number; msg: string }): 
+	ReactElement {
+	return (
+		<details>
+			<summary style={{ cursor: 'pointer' }}>
+					{selection.clickable ? (
+						<>
+							{selection.cards[index] ? (
+								<Button value={`${msg} ! s ${index}`}><b>{card}</b></Button>
+							) : (
+								<Button value={`${msg} ! s ${index}`}>{card}</Button>
+							)}
+							</>
+						) : (
+						<>{card}</>
+						)
+					}
+			</summary>
+			<div style={{ border: '1px solid', borderRadius: 4, padding: '4px 8px', marginTop: 4 }}>
+				{CardDescription[card]}<br></br>
+			</div>
+		</details>		
+	)
 }
 
 function CardSelection({ isActive, phase, selection }: { isActive: boolean; phase: GamePhase; selection: { cardNames: CardType[]; cardAmount: number; hasAny: boolean; result: string; } }): ReactElement | null {
@@ -186,7 +196,7 @@ export function render(this: This, ctx: RenderCtx): ReactElement {
 				<>
 				<VoltorbReaction isActive={ctx.isActive} phase={ctx.phase} hand={ctx.hand} msg={this.msg}/>
 				<CardSelection isActive={ctx.isActive} phase={ctx.phase} selection={ctx.selection}/>
-				<PlayerHand isActive={ctx.isActive} hand={ctx.hand} selection={ctx.selection} msg={this.msg}/>
+				<PlayerHand hand={ctx.hand} selection={ctx.selection} msg={this.msg}/>
 				<EndTurnAndDraw isActive={ctx.isActive} phase={ctx.phase} msg={this.msg}/>
 				</>
 			) : null}		
