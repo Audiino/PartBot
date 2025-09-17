@@ -2,7 +2,7 @@ import { LogEntry } from '@/ps/games/render';
 import { Button, Form, Username } from '@/utils/components/ps';
 import { Logger } from '@/utils/logger';
 import { pluralize } from '@/utils/pluralize';
-import { CardType, CardDescription } from '@/ps/games/explodingvoltorb/constants';
+import { CardType, CardName, CardDescription } from '@/ps/games/explodingvoltorb/constants';
 
 import type { ExplodingVoltorb } from '@/ps/games/explodingvoltorb';
 import type { Log } from '@/ps/games/explodingvoltorb/logs';
@@ -80,16 +80,16 @@ function PlayerHandAmount({ players }: { players: RenderCtx['players'] }): React
 
 function PlayerHand(
 	{ hand, selection, msg }: 
-	{ hand: CardType[] | undefined; selection: { clickable: boolean; cards: boolean[] }; msg: string; }):
+	{ hand: CardType[] | undefined; selection: { clickable: boolean; index: boolean[] }; msg: string; }):
 	ReactElement | null {
 		if (!hand) return null;
 
 		return (
 			<UserPanel>
 				<>
-				{hand?.map((card, index) => (
-					<div key={index} style={{ margin: '2px 0' }}>
-						<ShowCard card={card} selection={selection} index={index} msg={msg}></ShowCard>
+				{hand?.map((card, i) => (
+					<div key={i} style={{ margin: '2px 0' }}>
+						<ShowCard card={card} selection={selection} i={i} msg={msg}></ShowCard>
 					</div>
 				))}
 				</>
@@ -98,22 +98,22 @@ function PlayerHand(
 }
 
 function ShowCard(
-	{ card, selection, index, msg }: 
-	{ card: CardType; selection: { clickable: boolean; cards: boolean[] }; index: number; msg: string }): 
+	{ card, selection, i, msg }:
+	{ card: CardType; selection: { clickable: boolean; index: boolean[] }; i: number; msg: string }):
 	ReactElement {
 	return (
 		<details>
 			<summary style={{ cursor: 'pointer' }}>
 					{selection.clickable ? (
 						<>
-							{selection.cards[index] ? (
-								<Button value={`${msg} ! s ${index}`}><b>{card}</b></Button>
+							{selection.index[i] ? (
+								<Button value={`${msg} ! s ${i}`}><b>{CardName[card]}</b></Button>
 							) : (
-								<Button value={`${msg} ! s ${index}`}>{card}</Button>
+								<Button value={`${msg} ! s ${i}`}>{CardName[card]}</Button>
 							)}
 							</>
 						) : (
-						<>{card}</>
+						<>{CardName[card]}</>
 						)
 					}
 			</summary>
@@ -124,15 +124,23 @@ function ShowCard(
 	)
 }
 
-function CardSelection({ isActive, phase, selection }: { isActive: boolean; phase: GamePhase; selection: { cardNames: CardType[]; cardAmount: number; hasAny: boolean; result: string; } }): ReactElement | null {
+function CardSelection(
+	{ isActive, phase, selection, msg }:
+	{ isActive: boolean; phase: GamePhase; selection: { cards: CardType[]; cardAmount: number; hasAny: boolean; result: { text: string; isValid: boolean }; actionText: string; }; msg: string }):
+	ReactElement | null {
 	if (!isActive) return null;
 	if (phase === 'Voltorb reaction') return null;
 
 	if (selection.hasAny) {		
 		return (
 		<UserPanel>
-			<div>You have selected {pluralize(selection.cardAmount, 'card', 'cards')}: {selection.cardNames.join(", ")}</div>
-			<div>{selection.result}</div>
+			<div>
+				You have selected {pluralize(selection.cardAmount, 'card', 'cards')}: {selection.cards.map(card => CardName[card]).join(", ")}
+			</div>
+			<div>{selection.result.text}</div>
+			{selection.result.isValid ? (
+				<Button value={`${msg} ! p ${selection.actionText}`}><b>Play</b></Button>
+			) : null}
 		</UserPanel>
 		)
 	}
@@ -195,11 +203,11 @@ export function render(this: This, ctx: RenderCtx): ReactElement {
 			{ctx.side ? (
 				<>
 				<VoltorbReaction isActive={ctx.isActive} phase={ctx.phase} hand={ctx.hand} msg={this.msg}/>
-				<CardSelection isActive={ctx.isActive} phase={ctx.phase} selection={ctx.selection}/>
 				<PlayerHand hand={ctx.hand} selection={ctx.selection} msg={this.msg}/>
+				<CardSelection isActive={ctx.isActive} phase={ctx.phase} selection={ctx.selection} msg={this.msg}/>
 				<EndTurnAndDraw isActive={ctx.isActive} phase={ctx.phase} msg={this.msg}/>
 				</>
-			) : null}		
+			) : null}
 		</center>
 	);
 }

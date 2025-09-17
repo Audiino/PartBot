@@ -27,11 +27,15 @@ export type RenderCtx = {
 	hand: CardType[] | undefined;
 	selection: {
 		clickable: boolean;
-		cards: boolean[];
-		cardNames: CardType[];
+		index: boolean[];
+		cards: CardType[];
 		cardAmount: number;
 		hasAny: boolean;
-		result: string;
+		result: {
+			text: string;
+			isValid: boolean;
+		};
+		actionText: string;
 	};
 	isActive: boolean;
 	side: string | null;
@@ -39,6 +43,8 @@ export type RenderCtx = {
 	phase: GamePhase;
 	phaseData: PhaseData;
 };
+
+export type CardSelectionResult = { text: string; isValid: boolean };
 
 export type WinCtx = { type: 'win'; winnerIDs: string[] } | { type: 'draw' };
 

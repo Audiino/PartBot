@@ -1,44 +1,119 @@
 /* eslint-disable max-len */
 
 export enum CardType {
-	EXPLODING_VOLTORB = 'Exploding Voltorb',
-	DEFUSE = 'Defuse',
-	ALTER_THE_FUTURE = 'Alter the future',
-	SEE_THE_FUTURE = 'See the future',
-	TARGETED_ATTACK = 'Targeted attack',
-	ATTACK = 'Attack',
-	DRAW_FROM_BOTTOM = 'Draw from bottom',
-	FAVOR = 'Favor',
-	SHUFFLE = 'Shuffle',
-	SKIP = 'Skip',
-	NOPE = 'Nope',
-	BEARD_CAT = 'Cat card: beard cat',
-	CATTERMELON_CAT = 'Cat card: cattermelon cat',
-	POTATO_CAT = 'Cat card: potato cat',
-	RAINBOW_CAT = 'Cat card: rainbow cat',
-	TACO_CAT = 'Cat card: taco cat',
-	FERAL_CAT = 'Feral cat',
+	EXPLODING_VOLTORB = 'EXPLODING_VOLTORB',
+	DEFUSE = 'DEFUSE',
+	ALTER_THE_FUTURE = 'ALTER_THE_FUTURE',
+	SEE_THE_FUTURE = 'SEE_THE_FUTURE',
+	TARGETED_ATTACK = 'TARGETED_ATTACK',
+	ATTACK = 'ATTACK',
+	DRAW_FROM_BOTTOM = 'DRAW_FROM_BOTTOM',
+	FAVOR = 'FAVOR',
+	SHUFFLE = 'SHUFFLE',
+	SKIP = 'SKIP',
+	NOPE = 'NOPE',
+	BEARD_CAT = 'BEARD_CAT',
+	CATTERMELON_CAT = 'CATTERMELON_CAT',
+	POTATO_CAT = 'POTATO_CAT',
+	RAINBOW_CAT = 'RAINBOW_CAT',
+	TACO_CAT = 'TACO_CAT',
+	FERAL_CAT = 'FERAL_CAT',
 };
 
-export const CardDescription: Record<CardType, string> = {
-	[CardType.EXPLODING_VOLTORB]: "Show this card immediately. Unless you have a Defuse Card, you're dead. Discard all of your cards, including the Exploding Kitten.",
-	[CardType.DEFUSE]: 'Instead of exploding, secretly put the Exploding Voltorb back into the draw pile.',
-	[CardType.ALTER_THE_FUTURE]: 'Privately view and rearrange the top three cards of the draw pile.',
-	[CardType.SEE_THE_FUTURE]: 'Privately view the top three cards of the draw pile.',
-	[CardType.TARGETED_ATTACK]: 'End your turn without drawing a card. Force any player to take two turns. Play then continues from that player. This effect can stack.',
-	[CardType.ATTACK]: 'End your turn without drawing a card. Force the next player to take two turns. This effect can stack.',
-	[CardType.DRAW_FROM_BOTTOM]: 'End your turn by drawing the bottom card from the draw pile.',
-	[CardType.FAVOR]: 'Force any player to give you a card of their choice.',
-	[CardType.SHUFFLE]: 'Shuffle the draw pile.',
-	[CardType.SKIP]: 'End your turn without drawing a card.',
-	[CardType.NOPE]: 'Stop the action of another player. You can play this at any time. A Nope can be played on another Nope to negate it and create a Yup, and so on. Any cards that have been Noped are put in the discard pile.',
-	[CardType.BEARD_CAT]: 'The Beard Cat is powerless on its own, but can be used in Special Combos.',
-	[CardType.CATTERMELON_CAT]: 'The Cattermelon Cat is powerless on its own, but can be used in Special Combos.',
-	[CardType.POTATO_CAT]: 'The Potato Cat is powerless on its own, but can be used in Special Combos.',
-	[CardType.RAINBOW_CAT]: 'The Rainbow Cat is powerless on its own, but can be used in Special Combos.',
-	[CardType.TACO_CAT]: 'The Taco Cat is powerless on its own, but can be used in Special Combos.',
-	[CardType.FERAL_CAT]: 'The Feral Cat is powerless on its own, but can be used as any cat card in Special Combos.',
+export const ValidSingleCard: Set<CardType> = new Set([
+	CardType.ALTER_THE_FUTURE,
+	CardType.SEE_THE_FUTURE,
+	CardType.TARGETED_ATTACK,
+	CardType.ATTACK,
+	CardType.DRAW_FROM_BOTTOM,
+	CardType.FAVOR,
+	CardType.SHUFFLE,
+	CardType.SKIP,
+]);
+
+type CardInfo = {
+  name: string;
+  description: string;
+};
+
+export const CardData: Record<CardType, CardInfo> = {
+	[CardType.EXPLODING_VOLTORB]: {
+		name: 'Exploding Voltorb',
+		description: "Show this card immediately. Unless you have a Defuse Card, you're dead. Discard all of your cards, including the Exploding Kitten.",
+	},
+	[CardType.DEFUSE]: {
+		name: 'Defuse',
+		description: 'Instead of exploding, secretly put the Exploding Voltorb back into the draw pile.',
+	},
+	[CardType.ALTER_THE_FUTURE]: {
+		name: 'Alter the future',
+		description: 'Privately view and rearrange the top three cards of the draw pile.',
+	},
+	[CardType.SEE_THE_FUTURE]: {
+		name: 'See the future',
+		description: 'Privately view the top three cards of the draw pile.',
+	},
+	[CardType.TARGETED_ATTACK]: {
+		name: 'Targeted attack',
+		description: 'End your turn without drawing a card. Force any player to take two turns. Play then continues from that player. This effect can stack.',
+	},
+	[CardType.ATTACK]: {
+		name: 'Attack',
+		description: 'End your turn without drawing a card. Force the next player to take two turns. This effect can stack.',
+	},
+	[CardType.DRAW_FROM_BOTTOM]: {
+		name: 'Draw from bottom',
+		description: 'End your turn by drawing the bottom card from the draw pile.',
+	},
+	[CardType.FAVOR]: {
+		name: 'Favor',
+		description: 'Force any player to give you a card of their choice.',
+	},
+	[CardType.SHUFFLE]: {
+		name: 'Shuffle',
+		description: 'Shuffle the draw pile.',
+	},
+	[CardType.SKIP]: {
+		name: 'Skip',
+		description: 'End your turn without drawing a card.',
+	},
+	[CardType.NOPE]: {
+		name: 'Nope',
+		description: 'Stop the action of another player. You can play this at any time. A Nope can be played on another Nope to negate it and create a Yup, and so on. Any cards that have been Noped are put in the discard pile.',
+	},
+	[CardType.BEARD_CAT]: {
+		name: 'Cat card: Beard cat',
+		description: 'The Beard Cat is powerless on its own, but can be used in Special Combos.',
+	},
+	[CardType.CATTERMELON_CAT]: {
+		name: 'Cat card: Cattermelon cat',
+		description: 'The Cattermelon Cat is powerless on its own, but can be used in Special Combos.',
+	},
+	[CardType.POTATO_CAT]: {
+		name: 'Cat card: Potato cat',
+		description: 'The Potato Cat is powerless on its own, but can be used in Special Combos.',
+	},
+	[CardType.RAINBOW_CAT]: {
+		name: 'Cat card: Rainbow cat',
+		description: 'The Rainbow Cat is powerless on its own, but can be used in Special Combos.',
+	},
+	[CardType.TACO_CAT]: {
+		name: 'Cat card: Taco cat',
+		description: 'The Taco Cat is powerless on its own, but can be used in Special Combos.',
+	},
+	[CardType.FERAL_CAT]: {
+		name: 'Cat card: Feral cat',
+		description: 'The Feral Cat is powerless on its own, but can be used as any cat card in Special Combos.',
+	},
 }
+
+export const CardName: Record<CardType, string> = Object.fromEntries(
+	Object.entries(CardData).map(([key, value]) => [key, value.name])
+) as Record<CardType, string>;
+
+export const CardDescription: Record<CardType, string> = Object.fromEntries(
+	Object.entries(CardData).map(([key, value]) => [key, value.description])
+) as Record<CardType, string>;
 
 export enum ComboType {
 	TWO_OF_A_KIND = 'Two of a kind',

@@ -6,6 +6,7 @@ import {
 	CardType,
 	ComboDescription,
 	ComboType,
+	ValidSingleCard,
 } from '@/ps/games/explodingvoltorb/constants';
 import { render, renderMove } from '@/ps/games/explodingvoltorb/render';
 import { AllowedActions, GamePhase } from '@/ps/games/explodingvoltorb/types';
@@ -13,7 +14,7 @@ import { type BaseContext, BaseGame } from '@/ps/games/game';
 
 import type { TranslatedText } from '@/i18n/types';
 import type { Log } from '@/ps/games/explodingvoltorb/logs';
-import type { RenderCtx, State } from '@/ps/games/explodingvoltorb/types';
+import type { CardSelectionResult, RenderCtx, State } from '@/ps/games/explodingvoltorb/types';
 import type { ActionResponse, EndType } from '@/ps/games/types';
 import type { User } from 'ps-client';
 
@@ -53,6 +54,11 @@ export class ExplodingVoltorb extends BaseGame<State> {
 				
 				break;
 			}
+			// Play: play card(s)
+			case 'p': {
+				if (!value) this.throw();
+
+			}
 			// Nope: play a nope card
 			case 'n': {
 				break;
@@ -74,7 +80,7 @@ export class ExplodingVoltorb extends BaseGame<State> {
 		}
 	}
 
-	selectCard(value: string): void {		
+	selectCard(value: string): void {
 		const valueStr = value.replace(/\s/g, '');
 		if (!/^\d+$/.test(valueStr)) this.throw();
 
@@ -121,7 +127,7 @@ export class ExplodingVoltorb extends BaseGame<State> {
 		return selectedCardNames.every(card => card === selectedCardNames[0]);		
 	}
 
-	areCardsUnique(selectedCardNames: CardType[]): boolean{
+	areCardsUnique(selectedCardNames: CardType[]): boolean {
 		const uniqueCardNames = new Set(selectedCardNames);
 
 		if (selectedCardNames.length === uniqueCardNames.size) return true;
@@ -133,46 +139,50 @@ export class ExplodingVoltorb extends BaseGame<State> {
 		selectedCardNames: CardType[],
 		identical: boolean,
 		unique: boolean
-	): string {
+	): CardSelectionResult {
 		switch (selectedCardAmount) {
 			case 1: {
 				const card = selectedCardNames[0];
 
-				if (card === CardType.DEFUSE || card === CardType.NOPE) {
-        			return ComboDescription[ComboType.INVALID_CARD_SELECTION];
-      			}
-				else return CardDescription[card];
+				if (!ValidSingleCard.has(card)) {
+					return { text: ComboDescription[ComboType.INVALID_CARD_SELECTION], isValid: false };
+				}
+				else return { text: CardDescription[card], isValid: true };
 			}
 			case 2: {
 				if (identical) {
-					return ComboDescription[ComboType.TWO_OF_A_KIND];
+					return { text: ComboDescription[ComboType.TWO_OF_A_KIND], isValid: true };
 				}
 				else {
-					return ComboDescription[ComboType.INVALID_CARD_SELECTION];
+					return { text: ComboDescription[ComboType.INVALID_CARD_SELECTION], isValid: false };
 				}
 			}
 			case 3: {
 				if (identical) {
-					return ComboDescription[ComboType.THREE_OF_A_KIND];
+					return { text: ComboDescription[ComboType.THREE_OF_A_KIND], isValid: true };
 				}
 				else {
-					return ComboDescription[ComboType.INVALID_CARD_SELECTION];
+					return { text: ComboDescription[ComboType.INVALID_CARD_SELECTION], isValid: false };
 				}
 			}
 			case 4: {
-				return ComboDescription[ComboType.INVALID_CARD_SELECTION];
+				return { text: ComboDescription[ComboType.INVALID_CARD_SELECTION], isValid: true };
 			}
 			case 5: {
 				if (unique) {
-					return ComboDescription[ComboType.FIVE_UNIQUE];
+					return { text: ComboDescription[ComboType.FIVE_UNIQUE], isValid: true };
 				}
 				else {
-					return ComboDescription[ComboType.INVALID_CARD_SELECTION];
+					return { text: ComboDescription[ComboType.INVALID_CARD_SELECTION], isValid: false };
 				}
 			}
 			default:				
-				return ComboDescription[ComboType.INVALID_CARD_SELECTION];
+				return { text: ComboDescription[ComboType.INVALID_CARD_SELECTION], isValid: false };
 		}		
+	}
+
+	getActionText(selectedCards: CardType[]): string {
+  		return `${selectedCards.length} ${selectedCards.join(", ")}`;
 	}
 
 	drawTopCard(): void {        		
@@ -186,13 +196,13 @@ export class ExplodingVoltorb extends BaseGame<State> {
 			this.throw();
 		}
 	
-		const drewVoltorb = topCard === 'Exploding Voltorb';  
-		          
+		const drewVoltorb = topCard === 'EXPLODING_VOLTORB';
+
 		const oldHand = this.state.hand[turn];
 		this.state.hand[turn].push(topCard);	
 		
 		const hand = this.state.hand[turn];
-		const hasDefuse = hand.includes(CardType.DEFUSE);   
+		const hasDefuse = hand.includes(CardType.DEFUSE);
 		
 		let getsEliminated = false;
 
@@ -262,12 +272,11 @@ export class ExplodingVoltorb extends BaseGame<State> {
 		this.state.board.drawPile.splice(position - 1, 0, voltorbCard);	
 		
 		const [defuseCard] = hand.splice(defuseIndex, 1);
-
-		this.state.board.discardPile = [];
-		this.state.board.discardPileLastPlayed = [];
-		this.state.board.discardPile.push(defuseCard);
-		this.state.board.discardPileLastPlayed.push(defuseCard);
 		
+		this.state.board.discardPileLastPlayed = [];
+		this.state.board.discardPileLastPlayed.push(defuseCard);
+		this.state.board.discardPile.push(defuseCard);
+
 		this.state.phase = GamePhase.WaitingForAction;
 
 		const logEntry: Log = {
@@ -286,7 +295,8 @@ export class ExplodingVoltorb extends BaseGame<State> {
 		const hand = this.state.hand[side];
 		if (!hand) this.throw();
 		
-		this.state.board.discardPile = [];
+		this.state.board.discardPileLastPlayed = [];
+		this.state.board.discardPileLastPlayed.push(...hand);
 		this.state.board.discardPile.push(...hand);
 		this.state.hand[side] = [];
 	}
@@ -340,14 +350,14 @@ export class ExplodingVoltorb extends BaseGame<State> {
 	render(side: string | null) {
 		const isActive = !!side && side === this.turn;
 		const hand = side ? this.state.hand[side] : undefined;
-
-		const selectedCardAmount = this.getSelectedCardAmount(this.turn!);
+		
 		const selectedCardNames = this.getSelectedCardNames(this.turn!);
+		const selectedCardAmount = this.getSelectedCardAmount(this.turn!);
 		const identical = this.areCardsIdentical(selectedCardNames);
 		const unique = this.areCardsUnique(selectedCardNames);
 
 		const ctx: RenderCtx = {
-			id: this.id,												
+			id: this.id,
 			players: Object.fromEntries(
 				this.turns.map(turn => {
 					const player = this.players[turn];
@@ -372,11 +382,12 @@ export class ExplodingVoltorb extends BaseGame<State> {
 			hand,
 			selection: {
 				clickable: isActive && (this.state.phase !== 'Voltorb reaction'),
-				cards: this.state.selectedCards,
-				cardNames: side ? this.getSelectedCardNames(side) : [],
-				cardAmount: side ? this.getSelectedCardAmount(side) : 0,
+				index: this.state.selectedCards,
+				cards: selectedCardNames,
+				cardAmount: selectedCardAmount,
 				hasAny: this.state.selectedCards.some(isSelected => isSelected),
 				result: this.getCardSelectionResult( selectedCardAmount, selectedCardNames, identical, unique ),
+				actionText: this.getActionText(selectedCardNames),
 			},
 			isActive,
 			side,
