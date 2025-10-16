@@ -9,13 +9,13 @@ export type State = {
 		drawPile: CardType[];
 		discardPile: CardType[];
 		discardPileLastPlayed: CardType[];
-	};        
+	};
 	phase: GamePhase;
 	phaseData: PhaseData;
 };
 
 export type RenderCtx = {
-	id: string;		
+	id: string;
 	header?: string;
 	dimHeader?: boolean;
 	players: Record<string, { name: string; hand: number; out?: boolean | undefined }>;
@@ -39,21 +39,22 @@ export type RenderCtx = {
 	};
 	isActive: boolean;
 	side: string | null;
-	turn: string;	
+	turn: string;
 	phase: GamePhase;
 	phaseData: PhaseData;
 };
 
 export type CardSelectionResult = { text: string; isValid: boolean };
+export type CardPlayResult = { isValid: boolean; amount?: number; cardsPlayed?: CardType[] };
 
 export type WinCtx = { type: 'win'; winnerIDs: string[] } | { type: 'draw' };
 
 export enum GamePhase {
 	WaitingForAction = 'Waiting for action',
 	NopingWindow = 'Noping window',
-	ResolvingAction = 'Resolving action',	
+	ResolvingAction = 'Resolving action',
 	VoltorbReaction = 'Voltorb reaction',
-	EndOfTurn = 'End of turn',    
+	EndOfTurn = 'End of turn',
 }
 
 export type PhaseDataMap = {
@@ -86,7 +87,7 @@ type Phase = keyof PhaseDataMap;
 type PhaseData = PhaseDataMap[Phase];
 
 export const AllowedActions: Record<GamePhase, string[]> = {
-	[GamePhase.WaitingForAction]: ['d', 's'],
+	[GamePhase.WaitingForAction]: ['d', 's', 'p'],
 	[GamePhase.NopingWindow]: ['n'],
 	[GamePhase.ResolvingAction]: [],
 	[GamePhase.VoltorbReaction]: ['r'],

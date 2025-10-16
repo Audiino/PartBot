@@ -14,7 +14,7 @@ import { type BaseContext, BaseGame } from '@/ps/games/game';
 
 import type { TranslatedText } from '@/i18n/types';
 import type { Log } from '@/ps/games/explodingvoltorb/logs';
-import type { CardSelectionResult, RenderCtx, State } from '@/ps/games/explodingvoltorb/types';
+import type { CardPlayResult, CardSelectionResult, RenderCtx, State } from '@/ps/games/explodingvoltorb/types';
 import type { ActionResponse, EndType } from '@/ps/games/types';
 import type { User } from 'ps-client';
 
@@ -57,13 +57,21 @@ export class ExplodingVoltorb extends BaseGame<State> {
 			// Play: play card(s)
 			case 'p': {
 				if (!value) this.throw();
+				this.parsePlayText(value, this.turn!);
+				// TODO: actually play the card now, don't forget to add const result =
+				// can probably start with shuffle or something easy
 
+				// these were funny lol (i need a better way to tell myself what's happening)
+				// but that is for later, aka ill do that when im forced to
+				// if (!result.isValid) this.throw('INVALID_ALIAS');
+				// else this.throw('GRAMMAR.OR');
+				
 			}
 			// Nope: play a nope card
 			case 'n': {
 				break;
 			}			
-			// Draw: d
+			// Draw: draw top card
 			case 'd': {
 				this.deselectAllCards();
 				this.drawTopCard();				
@@ -181,9 +189,46 @@ export class ExplodingVoltorb extends BaseGame<State> {
 		}		
 	}
 
-	getActionText(selectedCards: CardType[]): string {
-  		return `${selectedCards.length} ${selectedCards.join(", ")}`;
+	getActionText(selectedCards: boolean[]): string {
+		const actionText = selectedCards.map((selected, index) => (selected ? index : null))
+										.filter((index): index is number => index !== null)
+										.join(", ");
+  		return actionText;
 	}
+
+	parsePlayText(value: string, side: string): CardPlayResult {
+		const valueStr = value.replace(/\s/g, '');
+		if (!/^(\d+)(,\d+)*$/.test(valueStr)) {
+			return { isValid: false};
+		}		
+		
+		const indices = valueStr.split(',').map(num => parseInt(num, 10));
+		const hand = this.state.hand[side];
+
+		for (const i of indices) {
+			if (i < 0 || i >= hand.length) {
+				return { isValid: false };
+			}
+		}
+
+		const cardsPlayed = indices.map(i => hand[i]);
+
+		const identical = this.areCardsIdentical(cardsPlayed);
+		const unique = this.areCardsUnique(cardsPlayed);
+		const validCardsPlayed = this.getCardSelectionResult(indices.length, cardsPlayed, identical, unique);
+
+		if (validCardsPlayed.isValid) {
+			return {
+			isValid: true,
+			amount: indices.length,
+			cardsPlayed,
+			};
+		}
+		else {
+			return { isValid: false };
+		}
+	}
+		
 
 	drawTopCard(): void {        		
 		const turn = this.turn!;
@@ -214,7 +259,7 @@ export class ExplodingVoltorb extends BaseGame<State> {
 				voltorbDrawn: true,
 			};
 			
-			this.room.privateSend(turn, this.$T('GAME.EXPLODING_VOLTORB.DREW_VOLTORB'));                    			
+			this.room.privateSend(turn, this.$T('GAME.EXPLODING_VOLTORB.DREW_VOLTORB'));
 			
 			if (hasDefuse) {
 				this.update();
@@ -387,7 +432,7 @@ export class ExplodingVoltorb extends BaseGame<State> {
 				cardAmount: selectedCardAmount,
 				hasAny: this.state.selectedCards.some(isSelected => isSelected),
 				result: this.getCardSelectionResult( selectedCardAmount, selectedCardNames, identical, unique ),
-				actionText: this.getActionText(selectedCardNames),
+				actionText: this.getActionText(this.state.selectedCards),
 			},
 			isActive,
 			side,

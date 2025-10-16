@@ -10,17 +10,17 @@ export type Log = Satisfies<
 	} & (
 		| {
 				action: 'draw';
-				ctx: { hand: CardType[]; drawnCard: CardType; getsEliminated: boolean; }            								
+				ctx: { hand: CardType[]; drawnCard: CardType; getsEliminated: boolean; }
 		  }
-		| {     action: 'replace'; 
-				ctx: { replacePosition: number } 
+		| {		action: 'replace';
+				ctx: { replacePosition: number }
 		  }
-		| {     action: 'nope'; 
-				ctx: { rack: string[] } 
+		| {		action: 'nope';
+				ctx: { rack: string[] }
 		  }
-		| {     action: 'play'; 
-				ctx: { rack: string[] } 
-		  }  
+		| {		action: 'play';
+				ctx: { rack: string[] }
+		  }
 	)
 >;
 
